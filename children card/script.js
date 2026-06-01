@@ -41,6 +41,35 @@
   let confettiRunning = false;
   let petalsRunning = false;
 
+  // ===== 头像图片预加载（最高优先级） =====
+  const avatarImages = [
+    'image/李紫豪.jpg',
+    'image/修伟鑫.jpg',
+    'image/李佳烁.jpg',
+    'image/李泽森.jpg',
+    'image/张雯惠.jpg'
+  ];
+
+  function preloadAvatars() {
+    avatarImages.forEach((src, index) => {
+      const img = new Image();
+      img.src = src;
+      img.onload = () => {
+        const avatarEl = document.querySelector(`.member-card[data-id="${index}"] .anime-avatar`);
+        if (avatarEl && !avatarEl.classList.contains('loaded')) {
+          avatarEl.classList.add('loaded');
+        }
+      };
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', preloadAvatars);
+  } else {
+    preloadAvatars();
+  }
+
+  // ===== 触摸事件处理 =====
   function addTapEvent(element, handler) {
     if (!element) return;
     let isTouching = false;
@@ -255,25 +284,17 @@
 
   window.addEventListener('resize', resizeCanvas);
 
-  // ===== 图片加载处理 =====
-  function preloadImages() {
-    const images = document.querySelectorAll('.anime-avatar');
-    images.forEach((img) => {
-      if (img.complete) {
+  // ===== 图片加载完成检测 =====
+  function checkImagesLoaded() {
+    document.querySelectorAll('.anime-avatar').forEach((img) => {
+      if (img.complete && !img.classList.contains('loaded')) {
         img.classList.add('loaded');
-      } else {
-        img.addEventListener('load', () => {
-          img.classList.add('loaded');
-        });
-        img.addEventListener('error', () => {
-          img.classList.add('error');
-        });
       }
     });
   }
 
   // ===== 初始化 =====
-  preloadImages();
+  checkImagesLoaded();
   startAmbientPetals();
   setTimeout(() => showToast('👋 轻触信封拆开贺卡，祝老伙计们六一快乐！'), 1400);
 })();
