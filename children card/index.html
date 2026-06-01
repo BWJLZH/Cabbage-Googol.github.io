@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="format-detection" content="telephone=no">
+  <title>六一快乐 · 我的老伙计们</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&family=Ma+Shan+Zheng&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="phone-shell">
+    <div class="app">
+      <header class="top-bar">
+        <span class="top-icon">🎈</span>
+        <h1 class="top-title" id="pageTitle">十年老友</h1>
+        <span class="top-tag">六一</span>
+      </header>
+
+      <main class="pages">
+        <!-- 首页 -->
+        <section class="page active" id="page-home" data-title="十年老友">
+          <div class="scroll-area">
+            <div class="envelope" id="envelope">
+              <div class="envelope-flap"></div>
+              <div class="envelope-body">
+                <p class="envelope-hint">轻触拆开贺卡</p>
+                <span class="envelope-seal">💌</span>
+              </div>
+              <div class="letter">
+                <p class="letter-hand">致我的老伙计们</p>
+                <p class="letter-main">外面的世界要我成熟懂事，但在你们面前，我永远可以做回那个不用伪装的小朋友。</p>
+                <button class="btn-warm" type="button" id="readMore">展开完整祝福 →</button>
+              </div>
+            </div>
+
+            <div class="quote-card">
+              <div class="quote-mark">"</div>
+              <p>六一快乐，我的老伙计们。感谢你们陪我长大，也允许我永远年少。</p>
+              <span class="quote-from">—— 李紫豪</span>
+            </div>
+
+            <div class="stat-row">
+              <div class="stat-item">
+                <strong>≈10</strong>
+                <span>相识年数</span>
+              </div>
+              <div class="stat-item">
+                <strong>5</strong>
+                <span>铁杆老友</span>
+              </div>
+              <div class="stat-item">
+                <strong>∞</strong>
+                <span>寒暑假相聚</span>
+              </div>
+            </div>
+
+            <button class="btn-warm btn-full" type="button" id="homeCelebrate">🎊 撒彩片庆祝</button>
+          </div>
+        </section>
+
+        <!-- 五人 -->
+        <section class="page" id="page-friends" data-title="五位老友">
+          <div class="scroll-area">
+            <p class="section-tip">左右滑动 · 点击查看想对你说的话</p>
+            <div class="avatar-scroll" id="avatarScroll">
+              <!-- 李紫豪 -->
+              <article class="member-card" data-id="0">
+                <div class="avatar-frame me">
+                  <img src="image/李紫豪.jpg" alt="李紫豪" class="anime-avatar">
+                  <span class="avatar-badge">我</span>
+                </div>
+                <h3>李紫豪</h3>
+                <p>写这封信的人 · 永远的少年</p>
+              </article>
+
+              <!-- 修伟鑫 -->
+              <article class="member-card" data-id="1">
+                <div class="avatar-frame">
+                  <img src="image/修伟鑫.jpg" alt="修伟鑫" class="anime-avatar">
+                </div>
+                <h3>修伟鑫</h3>
+                <p>开黑搭子 · 聚会永动机</p>
+              </article>
+
+              <!-- 李佳烁 -->
+              <article class="member-card" data-id="2">
+                <div class="avatar-frame">
+                  <img src="image/李佳烁.jpg" alt="李佳烁" class="anime-avatar avatar-cu">
+                </div>
+                <h3>李佳烁</h3>
+                <p>雯惠的男友 · 靠谱老伙计</p>
+              </article>
+
+              <!-- 李泽森 -->
+              <article class="member-card" data-id="3">
+                <div class="avatar-frame">
+                  <img src="image/李泽森.jpg" alt="李泽森" class="anime-avatar avatar-up">
+                </div>
+                <h3>李泽森</h3>
+                <p>气氛担当 · 笑料制造机</p>
+              </article>
+
+              <!-- 张雯惠 -->
+              <article class="member-card" data-id="4">
+                <div class="avatar-frame girl">
+                  <img src="image/张雯惠.jpg" alt="张雯惠" class="anime-avatar avatar-down">
+                </div>
+                <h3>张雯惠</h3>
+                <p>团队唯一女生 · 温柔光点</p>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <!-- 故事 -->
+        <section class="page" id="page-story" data-title="我们的故事">
+          <div class="scroll-area">
+            <div class="story-banner">
+              <span>🏠 老家 · 寒暑假 · 不见不散</span>
+            </div>
+            <div class="timeline">
+              <div class="tl-item" data-animate>
+                <div class="tl-icon">🌱</div>
+                <div class="tl-body">
+                  <h4>初中相识</h4>
+                  <p>五个少年少女，从初中就玩在一起。那时候还不知道，这一玩就是将近十年。</p>
+                </div>
+              </div>
+              <div class="tl-item" data-animate>
+                <div class="tl-icon">🎒</div>
+                <div class="tl-body">
+                  <h4>各奔东西</h4>
+                  <p>初中毕业后，我们去了不同的高中，又考上了不同的大学，平时各自在不同城市求学打拼。</p>
+                </div>
+              </div>
+              <div class="tl-item" data-animate>
+                <div class="tl-icon">🎤</div>
+                <div class="tl-body">
+                  <h4>假期相聚</h4>
+                  <p>但每个寒暑假回到老家，我们一定会聚在一起——KTV 唱歌、组队打游戏、约着吃遍好吃的。</p>
+                </div>
+              </div>
+              <div class="tl-item" data-animate>
+                <div class="tl-icon">⚓</div>
+                <div class="tl-body">
+                  <h4>最安心的港湾</h4>
+                  <p>不管我在外经历了什么、有多疲惫，你们都一直陪着我。你们是我最安心的港湾。</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 回忆 -->
+        <section class="page" id="page-memories" data-title="欢乐回忆">
+          <div class="scroll-area">
+            <p class="section-tip">点击卡片，唤起那些快乐瞬间 ✨</p>
+            <div class="memory-list">
+              <button class="memory-card" type="button" data-msg="🎤 KTV 里谁唱谁跑调，但笑声永远最大声——那才是真正的「演唱会」。">
+                <span class="mem-icon">🎤</span>
+                <div><strong>KTV 开嗓</strong><small>麦克风在手，友情我有</small></div>
+              </button>
+              <button class="memory-card" type="button" data-msg="🎮 五排开黑，赢了一起吹，输了一起扛——最佳队友，永远是你们。">
+                <span class="mem-icon">🎮</span>
+                <div><strong>组队打游戏</strong><small>开黑上分，笑到停不下来</small></div>
+              </button>
+              <button class="memory-card" type="button" data-msg="🍲 火锅、烧烤、路边摊……吃遍好吃的，也吃出了十年的默契。">
+                <span class="mem-icon">🍜</span>
+                <div><strong>吃遍美食</strong><small>约饭，是我们不变的仪式</small></div>
+              </button>
+              <button class="memory-card" type="button" data-msg="🏠 寒暑假回老家，五个人凑齐——比过年还让人期待。">
+                <span class="mem-icon">🏡</span>
+                <div><strong>老家相聚</strong><small>异地再远，回家就能见</small></div>
+              </button>
+            </div>
+
+            <div class="bless-card">
+              <div class="bless-deco">✦ ✦ ✦</div>
+              <p class="bless-title">六一儿童节快乐</p>
+              <p class="bless-text">愿我们五位老友，无论身在何方，心中永远住着那个不用伪装的自己。下一个十年，继续一起走下去。</p>
+              <button class="btn-warm btn-full" type="button" id="blessBtn">💌 送出祝福</button>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <nav class="tab-bar">
+        <button class="tab active" type="button" data-page="home"><span>🏠</span><small>首页</small></button>
+        <button class="tab" type="button" data-page="friends"><span>👥</span><small>五人</small></button>
+        <button class="tab" type="button" data-page="story"><span>📖</span><small>故事</small></button>
+        <button class="tab" type="button" data-page="memories"><span>💛</span><small>回忆</small></button>
+      </nav>
+    </div>
+  </div>
+
+  <!-- 飘落彩片层 -->
+  <div class="petals" id="petals"></div>
+  <canvas id="confettiCanvas"></canvas>
+
+  <!-- 底部弹窗 -->
+  <div class="sheet" id="blessSheet">
+    <div class="sheet-mask"></div>
+    <div class="sheet-panel">
+      <div class="sheet-bar"></div>
+      <h2>🎈 完整祝福</h2>
+      <div class="sheet-content">
+        <p>致修伟鑫、李佳烁、李泽森、张雯惠，还有写这封信的我自己：</p>
+        <p>我们从初中就认识，至今快十年了。高中不同校，大学不同城，但每个寒暑假回老家，KTV、游戏、美食——我们从未缺席彼此的青春。</p>
+        <p>外面的世界要我成熟懂事，但在你们面前，我永远可以做回那个不用伪装的小朋友。</p>
+        <p class="sheet-sign">六一快乐，我的老伙计们。<br>感谢你们陪我长大，也允许我永远年少。<br>—— 李紫豪</p>
+      </div>
+      <button class="btn-warm btn-full" type="button" id="acceptBless">收下这份心意 ✨</button>
+    </div>
+  </div>
+
+  <div class="sheet" id="memberSheet">
+    <div class="sheet-mask"></div>
+    <div class="sheet-panel sheet-sm">
+      <div class="sheet-bar"></div>
+      <div class="sheet-member-head">
+        <div class="sheet-avatar" id="sheetAvatar"></div>
+        <h2 id="sheetName">李紫豪</h2>
+      </div>
+      <p class="sheet-msg" id="sheetMsg"></p>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="script.js"></script>
+</body>
+</html>
