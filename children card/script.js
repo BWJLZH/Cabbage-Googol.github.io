@@ -255,7 +255,25 @@
 
   window.addEventListener('resize', resizeCanvas);
 
+  // ===== 图片加载处理 =====
+  function preloadImages() {
+    const images = document.querySelectorAll('.anime-avatar');
+    images.forEach((img) => {
+      if (img.complete) {
+        img.classList.add('loaded');
+      } else {
+        img.addEventListener('load', () => {
+          img.classList.add('loaded');
+        });
+        img.addEventListener('error', () => {
+          img.classList.add('error');
+        });
+      }
+    });
+  }
+
   // ===== 初始化 =====
+  preloadImages();
   startAmbientPetals();
   setTimeout(() => showToast('👋 轻触信封拆开贺卡，祝老伙计们六一快乐！'), 1400);
 })();

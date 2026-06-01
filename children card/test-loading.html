@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>弱网加载测试</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, 'PingFang SC', sans-serif;
+      background: linear-gradient(135deg, #e8f2fa, #fce4ec);
+      min-height: 100vh;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+      color: #4a7eb5;
+      margin-bottom: 20px;
+    }
+    .controls {
+      background: #fff;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+    }
+    .controls label {
+      display: block;
+      margin-bottom: 8px;
+      color: #3d4f61;
+    }
+    .controls select, .controls button {
+      padding: 10px 16px;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+      font-size: 14px;
+      margin-right: 10px;
+      cursor: pointer;
+    }
+    .controls button {
+      background: linear-gradient(135deg, #7ba7d8, #f4a4b8);
+      color: #fff;
+      border: none;
+    }
+    .stats {
+      background: #fff;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+    }
+    .stats h2 {
+      color: #4a7eb5;
+      margin-bottom: 12px;
+      font-size: 16px;
+    }
+    .stat-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid #eee;
+      font-size: 14px;
+    }
+    .stat-item:last-child { border-bottom: none; }
+    .stat-value { color: #f4a4b8; font-weight: 600; }
+    .test-area {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 16px;
+    }
+    .avatar-card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 16px;
+      text-align: center;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+    }
+    .avatar-frame {
+      width: 100px;
+      height: 100px;
+      margin: 0 auto 12px;
+      border-radius: 50%;
+      padding: 4px;
+      background: linear-gradient(135deg, #7ba7d8, #f4a4b8);
+      position: relative;
+    }
+    .avatar-frame::before {
+      content: '';
+      position: absolute;
+      inset: 4px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #e8f2fa, #fce4ec);
+      z-index: 0;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    .avatar-img {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      display: block;
+      object-fit: cover;
+      position: relative;
+      z-index: 1;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    .avatar-img.loaded {
+      opacity: 1;
+    }
+    .avatar-img.loaded + .load-time {
+      display: block;
+    }
+    .load-time {
+      display: none;
+      position: absolute;
+      bottom: -20px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 10px;
+      color: #4a7eb5;
+      white-space: nowrap;
+    }
+    .avatar-name {
+      font-size: 14px;
+      color: #3d4f61;
+      margin-top: 8px;
+    }
+    .progress-bar {
+      width: 100%;
+      height: 4px;
+      background: #eee;
+      border-radius: 2px;
+      margin-top: 8px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #7ba7d8, #f4a4b8);
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+  </style>
+</head>
+<body>
+  <h1>弱网环境加载测试</h1>
+  
+  <div class="controls">
+    <label>选择网络模拟条件：</label>
+    <select id="networkSpeed">
+      <option value="0">正常网络 (0ms 延迟)</option>
+      <option value="500">良好 3G (500ms 延迟)</option>
+      <option value="1000" selected>弱 3G (1000ms 延迟)</option>
+      <option value="2000">2G 网络 (2000ms 延迟)</option>
+      <option value="3000">极差网络 (3000ms 延迟)</option>
+    </select>
+    <button id="startTest">开始测试</button>
+    <button id="clearTest">清除结果</button>
+  </div>
+
+  <div class="stats">
+    <h2>加载统计</h2>
+    <div class="stat-item">
+      <span>测试状态</span>
+      <span class="stat-value" id="testStatus">等待开始</span>
+    </div>
+    <div class="stat-item">
+      <span>总加载时间</span>
+      <span class="stat-value" id="totalTime">-</span>
+    </div>
+    <div class="stat-item">
+      <span>平均加载时间</span>
+      <span class="stat-value" id="avgTime">-</span>
+    </div>
+    <div class="stat-item">
+      <span>最快加载</span>
+      <span class="stat-value" id="minTime">-</span>
+    </div>
+    <div class="stat-item">
+      <span>最慢加载</span>
+      <span class="stat-value" id="maxTime">-</span>
+    </div>
+  </div>
+
+  <div class="test-area" id="testArea"></div>
+
+  <script>
+    const members = [
+      { name: '李紫豪', file: '李紫豪.jpg', size: 168 },
+      { name: '修伟鑫', file: '修伟鑫.jpg', size: 340 },
+      { name: '李佳烁', file: '李佳烁.jpg', size: 322 },
+      { name: '李泽森', file: '李泽森.jpg', size: 278 },
+      { name: '张雯惠', file: '张雯惠.jpg', size: 240 }
+    ];
+
+    const testArea = document.getElementById('testArea');
+    const networkSpeed = document.getElementById('networkSpeed');
+    const startBtn = document.getElementById('startTest');
+    const clearBtn = document.getElementById('clearTest');
+
+    let loadTimes = [];
+
+    function createAvatarCards() {
+      testArea.innerHTML = '';
+      members.forEach((member, index) => {
+        const card = document.createElement('div');
+        card.className = 'avatar-card';
+        card.innerHTML = `
+          <div class="avatar-frame">
+            <img class="avatar-img" data-index="${index}" alt="${member.name}">
+            <span class="load-time"></span>
+          </div>
+          <div class="avatar-name">${member.name}</div>
+          <div class="progress-bar">
+            <div class="progress-fill"></div>
+          </div>
+        `;
+        testArea.appendChild(card);
+      });
+    }
+
+    function simulateWeakNetwork(delay) {
+      return new Promise(resolve => setTimeout(resolve, delay));
+    }
+
+    async function loadImageWithDelay(img, src, delay, index) {
+      const startTime = performance.now();
+      const progressFill = img.closest('.avatar-card').querySelector('.progress-fill');
+      const loadTimeSpan = img.nextElementSibling;
+      
+      await simulateWeakNetwork(delay);
+      
+      return new Promise((resolve) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('GET', src, true);
+        xhr.responseType = 'blob';
+        
+        xhr.onprogress = (e) => {
+          if (e.lengthComputable) {
+            const percent = (e.loaded / e.total) * 100;
+            progressFill.style.width = percent + '%';
+          }
+        };
+        
+        xhr.onload = () => {
+          const endTime = performance.now();
+          const loadTime = endTime - startTime;
+          
+          const url = URL.createObjectURL(xhr.response);
+          img.src = url;
+          img.classList.add('loaded');
+          loadTimeSpan.textContent = Math.round(loadTime) + 'ms';
+          
+          resolve(loadTime);
+        };
+        
+        xhr.onerror = () => {
+          img.classList.add('loaded');
+          loadTimeSpan.textContent = '加载失败';
+          resolve(null);
+        };
+        
+        xhr.send();
+      });
+    }
+
+    async function runTest() {
+      const delay = parseInt(networkSpeed.value, 10);
+      loadTimes = [];
+      
+      document.getElementById('testStatus').textContent = '测试中...';
+      document.getElementById('totalTime').textContent = '-';
+      document.getElementById('avgTime').textContent = '-';
+      document.getElementById('minTime').textContent = '-';
+      document.getElementById('maxTime').textContent = '-';
+      
+      createAvatarCards();
+      
+      const testStartTime = performance.now();
+      const imgs = document.querySelectorAll('.avatar-img');
+      
+      const promises = [];
+      imgs.forEach((img, index) => {
+        const src = `image/${members[index].file}`;
+        promises.push(
+          loadImageWithDelay(img, src, delay, index).then(time => {
+            if (time !== null) {
+              loadTimes.push(time);
+            }
+          })
+        );
+      });
+      
+      await Promise.all(promises);
+      
+      const testEndTime = performance.now();
+      const totalTime = testEndTime - testStartTime;
+      
+      if (loadTimes.length > 0) {
+        const avgTime = loadTimes.reduce((a, b) => a + b, 0) / loadTimes.length;
+        const minTime = Math.min(...loadTimes);
+        const maxTime = Math.max(...loadTimes);
+        
+        document.getElementById('testStatus').textContent = '测试完成';
+        document.getElementById('totalTime').textContent = Math.round(totalTime) + 'ms';
+        document.getElementById('avgTime').textContent = Math.round(avgTime) + 'ms';
+        document.getElementById('minTime').textContent = Math.round(minTime) + 'ms';
+        document.getElementById('maxTime').textContent = Math.round(maxTime) + 'ms';
+      } else {
+        document.getElementById('testStatus').textContent = '测试失败';
+      }
+    }
+
+    startBtn.addEventListener('click', runTest);
+    clearBtn.addEventListener('click', () => {
+      testArea.innerHTML = '';
+      loadTimes = [];
+      document.getElementById('testStatus').textContent = '等待开始';
+      document.getElementById('totalTime').textContent = '-';
+      document.getElementById('avgTime').textContent = '-';
+      document.getElementById('minTime').textContent = '-';
+      document.getElementById('maxTime').textContent = '-';
+    });
+
+    createAvatarCards();
+  </script>
+</body>
+</html>
