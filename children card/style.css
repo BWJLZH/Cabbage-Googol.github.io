@@ -330,7 +330,7 @@ html, body {
 
 .member-card {
   width: 100%;
-  max-width: 300px;
+  max-width: 280px;
   margin: 0 auto;
   scroll-snap-align: center;
   background: var(--card);
