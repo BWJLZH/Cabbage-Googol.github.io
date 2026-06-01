@@ -41,6 +41,26 @@
   let confettiRunning = false;
   let petalsRunning = false;
 
+  function addTapEvent(element, handler) {
+    if (!element) return;
+    let isTouching = false;
+    element.addEventListener('touchstart', function() {
+      isTouching = true;
+    }, { passive: true });
+    element.addEventListener('touchend', function(e) {
+      e.preventDefault();
+      if (isTouching) {
+        handler.call(this, e);
+        isTouching = false;
+      }
+    }, { passive: false });
+    element.addEventListener('click', function(e) {
+      if (!isTouching) {
+        handler.call(this, e);
+      }
+    });
+  }
+
   // ===== Tab 切换 =====
   function goPage(name) {
     pages.forEach((p) => p.classList.toggle('active', p.id === 'page-' + name));
@@ -50,7 +70,7 @@
     if (name === 'story') showTimeline();
   }
 
-  tabs.forEach((tab) => tab.addEventListener('click', () => goPage(tab.dataset.page)));
+  tabs.forEach((tab) => addTapEvent(tab, () => goPage(tab.dataset.page)));
 
   // ===== Sheet =====
   function openSheet(sheet) {
@@ -68,19 +88,19 @@
   });
 
   // ===== 信封 =====
-  envelope.addEventListener('click', () => {
+  addTapEvent(envelope, function() {
     if (!envelope.classList.contains('open')) {
       envelope.classList.add('open');
       spawnPetals(12);
     }
   });
 
-  document.getElementById('readMore').addEventListener('click', (e) => {
+  addTapEvent(document.getElementById('readMore'), function(e) {
     e.stopPropagation();
     openSheet(blessSheet);
   });
 
-  document.getElementById('acceptBless').addEventListener('click', () => {
+  addTapEvent(document.getElementById('acceptBless'), function() {
     closeSheet(blessSheet);
     fireConfetti();
     showToast('心意已收下，六一快乐！🎈');
@@ -88,13 +108,13 @@
 
   // ===== 成员卡片 =====
   document.querySelectorAll('.member-card').forEach((card) => {
-    card.addEventListener('click', () => {
+    addTapEvent(card, function() {
       const id = parseInt(card.dataset.id, 10);
       const member = members[id];
-      const svg = card.querySelector('.anime-avatar').cloneNode(true);
+      const avatarEl = card.querySelector('.anime-avatar').cloneNode(true);
       const container = document.getElementById('sheetAvatar');
       container.innerHTML = '';
-      container.appendChild(svg);
+      container.appendChild(avatarEl);
       document.getElementById('sheetName').textContent = member.name;
       document.getElementById('sheetMsg').textContent = member.msg;
       openSheet(memberSheet);
@@ -112,7 +132,7 @@
 
   // ===== 回忆卡片 =====
   document.querySelectorAll('.memory-card').forEach((card) => {
-    card.addEventListener('click', () => {
+    addTapEvent(card, function() {
       showToast(card.dataset.msg);
       spawnPetals(6);
     });
@@ -124,10 +144,17 @@
     showToast('🎊 十年友情，万岁！六一快乐，老伙计们！');
   }
 
-  document.getElementById('homeCelebrate').addEventListener('click', celebrate);
-  document.getElementById('blessBtn').addEventListener('click', () => {
+  addTapEvent(document.getElementById('homeCelebrate'), celebrate);
+  addTapEvent(document.getElementById('blessBtn'), function() {
     openSheet(blessSheet);
     spawnPetals(10);
+  });
+
+  // ===== Sheet 遮罩点击关闭 =====
+  document.querySelectorAll('.sheet-mask').forEach((mask) => {
+    addTapEvent(mask, function() {
+      closeSheet(mask.closest('.sheet'));
+    });
   });
 
   // ===== 时间线动画 =====
