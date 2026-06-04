@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <!--
+    viewport 完整配置：
+    - width=device-width：宽度等于设备宽度
+    - initial-scale=1.0：初始缩放1倍
+    - maximum-scale=1.0, minimum-scale=1.0：禁止用户缩放
+    - user-scalable=no：禁止用户手动缩放（适配微信浏览器）
+    - viewport-fit=cover：适配iPhone刘海屏
+  -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <!-- 禁止iOS Safari自动将数字识别为电话号码 -->
+  <meta name="format-detection" content="telephone=no">
+  <!-- 微信浏览器适配：全屏Web App模式 -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>李紫豪的名片</title>
+  <!-- 引入CSS样式文件 -->
+  <link rel="stylesheet" href="card.css">
+</head>
+<body>
+
+  <!--
+    ==================== 第1部分：欢迎遮罩层 ====================
+    作用：全屏深色遮罩，展示欢迎语
+    交互：点击页面任意位置 → 遮罩平滑淡出 → 自动播放背景音乐 → 显示名片主页面
+    修改：修改下方 .welcome-text 内的文字即可更改欢迎语
+  -->
+  <div id="welcome-overlay">
+    <!-- 欢迎主标题文字；修改方式：直接修改下方文字内容 -->
+    <div class="welcome-text">欢迎查看李紫豪的名片</div>
+    <!-- 提示点击的小字 -->
+    <div class="welcome-hint">点击任意位置进入</div>
+  </div>
+
+  <!--
+    ==================== 第2部分：背景音乐 ====================
+    此处替换自己的MP3在线链接，自行更换音源，无需帮我查找音乐
+    修改方式：将下方 src="" 引号内的URL替换为你自己的MP3链接
+    注意：preload="none" 不预加载，遵守手机浏览器播放规则
+          必须由用户点击触发播放，不能自动播放（移动端安全策略）
+  -->
+  <audio id="bg-music" src="" loop preload="none">
+    您的浏览器不支持音频播放。
+  </audio>
+
+  <!--
+    ==================== 第3部分：星光粒子画布 ====================
+    使用Canvas绘制紫色星光背景，JS动态生成粒子并循环动画
+    所有粒子仅使用紫色系颜色
+  -->
+  <canvas id="stars-canvas"></canvas>
+
+  <!--
+    ==================== 第4部分：名片卡片主体 ====================
+    卡片居中固定，本身不旋转不晃动
+    外围紫色流体渐变边框沿卡片四周顺时针无限循环流动（CSS动画实现）
+  -->
+  <div class="card-wrapper">
+    <div class="card">
+
+      <!-- ===== 4.1 圆形头像区域 ===== -->
+      <!--
+        替换个人头像图片URL地址
+        修改方式：将下方 src="" 引号内的URL替换为你的头像图片链接
+        建议使用正方形图片，尺寸 ≥ 200×200px
+      -->
+      <div class="avatar-container">
+        <img class="avatar" src="./image/cabbagegoogol.jpg" alt="头像">
+      </div>
+
+      <!-- ===== 4.2 真实姓名 ===== -->
+      <!-- 修改方式：修改下方文字 -->
+      <h1 class="real-name">李紫豪</h1>
+
+      <!-- ===== 4.3 中文网名 ===== -->
+      <!-- 修改方式：修改下方文字 -->
+      <p class="nickname">亿颗大白菜</p>
+
+      <!-- ===== 4.4 英文ID ===== -->
+      <!-- 修改方式：修改下方文字 -->
+      <p class="english-id">Cabbage Googol</p>
+
+      <!-- ===== 4.5 分割线 ===== -->
+      <div class="divider"></div>
+
+      <!-- ===== 4.6 详细信息列表 ===== -->
+      <!-- 每条信息由图标 + 文字组成，修改方式：修改对应 span 内文字 -->
+      <div class="info-section">
+        <!-- 院校专业 -->
+        <div class="info-row">
+          <span class="info-icon">🎓</span>
+          <span class="info-text">山东交通学院｜数据计算及应用</span>
+        </div>
+        <!-- 所在地 -->
+        <div class="info-row">
+          <span class="info-icon">📍</span>
+          <span class="info-text">山东烟台</span>
+        </div>
+        <!-- 擅长领域 -->
+        <div class="info-row">
+          <span class="info-icon">💻</span>
+          <span class="info-text">前端开发、Java后端开发、AI大模型应用开发</span>
+        </div>
+      </div>
+
+      <!-- ===== 4.7 底部三个功能按钮 ===== -->
+      <div class="button-group">
+
+        <!--
+          按钮1：邮箱
+          修改联系方式：修改 data-contact 属性值即可
+          data-label 为弹窗标题文字
+        -->
+        <button
+          class="contact-btn"
+          data-type="email"
+          data-contact="2276879412@qq.com"
+          data-label="📧 电子邮箱"
+        >
+          <span class="btn-icon">📧</span>
+          <span class="btn-text">邮箱</span>
+        </button>
+
+        <!--
+          按钮2：Github
+          修改联系方式：修改 data-contact 属性值即可
+        -->
+        <button
+          class="contact-btn"
+          data-type="github"
+          data-contact="https://bwjlzh.github.io/Cabbage-Googol.github.io/"
+          data-label="🐙 Github"
+        >
+          <span class="btn-icon">🐙</span>
+          <span class="btn-text">Github</span>
+        </button>
+
+        <!--
+          按钮3：微信
+          修改联系方式：修改 data-contact 属性值即可
+        -->
+        <button
+          class="contact-btn"
+          data-type="wechat"
+          data-contact="wxid_xq8nku1ale2522"
+          data-label="💬 微信"
+        >
+          <span class="btn-icon">💬</span>
+          <span class="btn-text">微信</span>
+        </button>
+
+      </div>
+    </div>
+  </div>
+
+  <!--
+    ==================== 第5部分：联系方式弹窗 ====================
+    默认隐藏（display: none），点击邮箱/Github/微信按钮后弹出
+    弹窗内容由 JS 动态填充
+  -->
+  <div id="modal-overlay">
+    <div class="modal-box">
+      <!-- 弹窗标题，JS动态填充 -->
+      <h3 id="modal-title"></h3>
+      <!-- 弹窗内容，JS动态填充 -->
+      <p id="modal-content"></p>
+      <!-- 关闭按钮：修改文字直接改下方"关闭"二字 -->
+      <button id="modal-close">关闭</button>
+    </div>
+  </div>
+
+  <!-- 引入JS逻辑文件 -->
+  <script src="card.js"></script>
+</body>
+</html>

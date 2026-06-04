@@ -1,0 +1,500 @@
+/* ============================================================
+   card.css — 李紫豪名片样式表
+   配色方案：纯暗黑背景 + 紫色系（深浅紫色）
+   严禁出现：青色、蓝绿色、各类蓝色
+   移动端优先，完美适配手机 & 微信浏览器
+   ============================================================ */
+
+/* ===== CSS变量：统一管理所有紫色色值，方便后期调整配色 ===== */
+:root {
+  /* 背景色系 */
+  --bg-deep: #0a0a0f;        /* 最深背景色（近乎纯黑） */
+  --bg-card: #100a1f;        /* 卡片背景色（深紫黑） */
+  --bg-modal: #120820;       /* 弹窗背景色 */
+  /* 紫色系（从深到浅） */
+  --purple-darkest: #2e1065; /* 最深紫 */
+  --purple-deep: #4c1a8e;    /* 深紫 */
+  --purple-mid: #6d28d9;     /* 中等紫 */
+  --purple-base: #7c3aed;    /* 基准紫 */
+  --purple-light: #8b5cf6;   /* 亮紫 */
+  --purple-soft: #a78bfa;    /* 柔和紫 */
+  --purple-pale: #c084fc;    /* 浅紫 */
+  --purple-ghost: #e9d5ff;   /* 极浅紫（仅用于文字微亮） */
+  /* 文字色 */
+  --text-primary: #f5f0ff;   /* 主文字色（浅紫白） */
+  --text-secondary: #a78bfa; /* 次要文字色 */
+  --text-muted: #6d28d9;     /* 弱化文字色 */
+}
+
+/* ===== 全局重置 ===== */
+/* 去除默认边距、设置盒模型、禁止横向溢出 */
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* ===== HTML和Body基础设置 ===== */
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow-x: hidden;        /* 禁止横向滚动 */
+  background: var(--bg-deep); /* 暗黑背景 */
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC",
+               "Microsoft YaHei", "Helvetica Neue", sans-serif;
+  /* 适配手机字体渲染 */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* 禁止iOS橡皮筋效果导致的横向偏移 */
+  position: relative;
+}
+
+/* ===== 星光粒子画布 ===== */
+/* 铺满整个屏幕，置于底层，不阻挡交互 */
+#stars-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;               /* 在背景之上、卡片之下 */
+  pointer-events: none;      /* 不拦截点击事件 */
+}
+
+/* ============================================================
+   第1部分：欢迎遮罩层
+   ============================================================ */
+#welcome-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: #06060b;       /* 极深暗黑背景 */
+  z-index: 100;              /* 最高层级，盖住所有内容 */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  /* 淡出过渡动画：opacity 0.8秒缓出 */
+  transition: opacity 0.8s ease-out, visibility 0.8s ease-out;
+  visibility: visible;
+  opacity: 1;
+}
+
+/* 遮罩层隐藏状态（由JS添加此class触发淡出） */
+#welcome-overlay.hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;      /* 隐藏后不拦截点击 */
+}
+
+/* 欢迎主文字 */
+.welcome-text {
+  font-size: clamp(22px, 5vw, 34px); /* 移动端自适应字号 */
+  font-weight: 700;
+  color: var(--purple-ghost);         /* 极浅紫文字 */
+  text-align: center;
+  padding: 0 24px;
+  letter-spacing: 2px;                /* 字间距，增强设计感 */
+  /* 文字淡入动画 */
+  animation: welcomeFadeIn 1s ease-out;
+}
+
+/* 提示点击的小字 */
+.welcome-hint {
+  margin-top: 28px;
+  font-size: 14px;
+  color: var(--purple-soft);
+  letter-spacing: 1px;
+  /* 呼吸闪烁动画，引导用户点击 */
+  animation: hintPulse 2s ease-in-out infinite;
+}
+
+/* 欢迎文字淡入关键帧 */
+@keyframes welcomeFadeIn {
+  0%   { opacity: 0; transform: translateY(20px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+/* 提示文字呼吸闪烁关键帧 */
+@keyframes hintPulse {
+  0%, 100% { opacity: 0.4; }
+  50%      { opacity: 1; }
+}
+
+/* ============================================================
+   第2部分：名片卡片主体（含流体渐变边框）
+   ============================================================ */
+
+/* ---- 卡片外层包裹器：承载旋转渐变边框 ---- */
+.card-wrapper {
+  position: fixed;           /* 固定定位，始终居中 */
+  /* 居中定位计算 */
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 10;              /* 在星光之上 */
+  /* 卡片宽度：移动端自适应，最大380px */
+  width: calc(100% - 40px);
+  max-width: 380px;
+  /* 内边距决定可见边框的粗细 */
+  padding: 3px;
+  border-radius: 20px;
+  /* 静态渐变兜底，配合 ::before 实现流动效果 */
+  background: linear-gradient(135deg, var(--purple-darkest), var(--purple-mid), var(--purple-pale), var(--purple-deep));
+  background-size: 300% 300%;
+}
+
+/* ---- 流体渐变边框（::before伪元素旋转实现顺时针流动） ---- */
+.card-wrapper::before {
+  content: "";
+  position: absolute;
+  /* 扩大范围使边框可见 */
+  inset: -3px;
+  border-radius: 23px;       /* 比卡片略大，保持圆角一致 */
+  /* 紫色系锥形渐变：从深紫到亮紫再到浅紫，形成闭环 */
+  background: conic-gradient(
+    from 0deg,
+    var(--purple-darkest),   /* 最深紫 */
+    var(--purple-deep),      /* 深紫 */
+    var(--purple-base),      /* 基准紫 */
+    var(--purple-soft),      /* 柔和紫 */
+    var(--purple-pale),      /* 浅紫 */
+    var(--purple-light),     /* 亮紫 */
+    var(--purple-mid),       /* 中紫 */
+    var(--purple-darkest)    /* 回到最深紫（闭环） */
+  );
+  z-index: -1;               /* 置于卡片后方 */
+  /* 顺时针旋转动画：4秒一圈，线性无限循环 */
+  animation: borderFlow 4s linear infinite;
+}
+
+/* 边框顺时针流动关键帧 */
+@keyframes borderFlow {
+  0%   { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* ---- 卡片本体 ---- */
+/* 本身不旋转、不晃动，只有包裹器的 ::before 旋转 */
+.card {
+  position: relative;
+  background: var(--bg-card);          /* 深紫黑卡片背景 */
+  border-radius: 18px;                 /* 略小于 wrapper，适配圆角 */
+  padding: 32px 24px 24px;
+  text-align: center;
+  /* 轻微内阴影，增加立体感 */
+  box-shadow: inset 0 1px 0 rgba(139, 92, 246, 0.15),
+              0 8px 32px rgba(0, 0, 0, 0.6);
+  z-index: 1;
+}
+
+/* ============================================================
+   第3部分：名片内部各区域样式
+   ============================================================ */
+
+/* ---- 3.1 头像容器 ---- */
+.avatar-container {
+  width: 90px;
+  height: 90px;
+  margin: 0 auto 16px;       /* 居中，底部间距 */
+  border-radius: 50%;        /* 圆形 */
+  /* 紫色渐变边框环绕头像 */
+  border: 3px solid transparent;
+  background: linear-gradient(135deg, var(--purple-mid), var(--purple-pale)) border-box;
+  /* 使用 mask 实现边框渐变效果 */
+  /* -webkit-mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude; */
+  overflow: hidden;          /* 裁剪超出圆形的图片 */
+  /* 发光效果 */
+  box-shadow: 0 0 20px rgba(124, 58, 237, 0.4);
+}
+
+/* 头像图片 */
+.avatar {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;         /* 图片填充，裁剪多余部分 */
+  display: block;
+  border-radius: 50%;
+}
+
+/* ---- 3.2 真实姓名 ---- */
+.real-name {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: 3px;
+  margin-bottom: 6px;
+}
+
+/* ---- 3.3 中文网名 ---- */
+.nickname {
+  font-size: 15px;
+  color: var(--purple-soft);
+  margin-bottom: 4px;
+}
+
+/* ---- 3.4 英文ID ---- */
+.english-id {
+  font-size: 13px;
+  color: var(--text-muted);
+  letter-spacing: 1px;
+  margin-bottom: 4px;
+  font-style: italic;        /* 斜体区分英文ID */
+}
+
+/* ---- 3.5 分割线 ---- */
+.divider {
+  width: 60px;
+  height: 2px;
+  margin: 16px auto;
+  /* 紫色渐变分割线 */
+  background: linear-gradient(90deg, transparent, var(--purple-base), transparent);
+  border-radius: 1px;
+}
+
+/* ---- 3.6 详细信息区域 ---- */
+.info-section {
+  text-align: left;          /* 文字左对齐 */
+  margin-bottom: 20px;
+}
+
+/* 每条信息行 */
+.info-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 4px;
+  font-size: 14px;
+  color: var(--text-secondary);
+  border-bottom: 1px solid rgba(109, 40, 217, 0.2); /* 淡紫色分割线 */
+}
+
+/* 最后一行不显示底部边框 */
+.info-row:last-child {
+  border-bottom: none;
+}
+
+/* 信息图标 */
+.info-icon {
+  flex-shrink: 0;            /* 图标不被压缩 */
+  font-size: 16px;
+  width: 24px;
+  text-align: center;
+}
+
+/* 信息文字 */
+.info-text {
+  flex: 1;                   /* 文字占据剩余空间 */
+  line-height: 1.5;
+}
+
+/* ---- 3.7 底部按钮组 ---- */
+.button-group {
+  display: flex;
+  justify-content: center;
+  gap: 14px;                 /* 按钮间距 */
+  margin-top: 4px;
+}
+
+/* 联系按钮通用样式 */
+.contact-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  /* 按钮尺寸适配手机手指点击（≥44px高度） */
+  min-width: 72px;
+  min-height: 56px;
+  padding: 10px 14px;
+  /* 暗紫背景 */
+  background: rgba(76, 26, 142, 0.3);
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  border-radius: 14px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  outline: none;
+  /* 悬浮上浮过渡动画 */
+  transition: transform 0.25s ease,
+              box-shadow 0.25s ease,
+              color 0.25s ease,
+              border-color 0.25s ease;
+  /* 移动端去除默认样式 */
+  -webkit-tap-highlight-color: transparent;
+  -webkit-appearance: none;
+}
+
+/* ---- 按钮悬浮效果：小幅上浮 + 紫色高亮 ---- */
+.contact-btn:hover {
+  transform: translateY(-4px);                     /* 小幅上浮4px */
+  color: var(--purple-pale);                       /* 文字变为亮紫 */
+  border-color: var(--purple-base);                /* 边框变为基准紫 */
+  box-shadow: 0 6px 20px rgba(124, 58, 237, 0.35); /* 紫色发光阴影 */
+}
+
+/* 移动端（不支持hover的设备）：点击时的高亮反馈 */
+.contact-btn:active {
+  transform: translateY(-2px);
+  color: var(--purple-pale);
+  border-color: var(--purple-light);
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.4);
+  background: rgba(109, 40, 217, 0.4);
+}
+
+/* 按钮内的图标 */
+.btn-icon {
+  font-size: 20px;
+  pointer-events: none;      /* 图标不拦截按钮点击 */
+}
+
+/* 按钮内的文字 */
+.btn-text {
+  font-size: 12px;
+  letter-spacing: 1px;
+  pointer-events: none;
+}
+
+/* ============================================================
+   第4部分：联系信息弹窗
+   ============================================================ */
+
+/* 弹窗遮罩层：默认隐藏 */
+#modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  /* 半透明暗黑遮罩 */
+  background: rgba(6, 6, 11, 0.85);
+  z-index: 200;              /* 高于卡片和欢迎层 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* 默认隐藏 */
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  /* 淡入淡出过渡 */
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+/* 弹窗激活状态（由JS添加class） */
+#modal-overlay.active {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+/* 弹窗内容盒子 */
+.modal-box {
+  background: var(--bg-modal);
+  border-radius: 18px;
+  padding: 32px 28px 24px;
+  text-align: center;
+  /* 宽度适配手机屏幕 */
+  width: calc(100% - 60px);
+  max-width: 340px;
+  /* 紫色渐变边框 */
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  position: relative;
+  /* 用 box-shadow 模拟紫色发光边框 */
+  box-shadow: 0 0 0 2px rgba(109, 40, 217, 0.4),
+              0 8px 40px rgba(0, 0, 0, 0.7),
+              0 0 60px rgba(124, 58, 237, 0.25);
+  /* 弹窗出现动画 */
+  animation: modalPopIn 0.35s ease-out;
+}
+
+/* 弹窗弹出动画 */
+@keyframes modalPopIn {
+  0%   { opacity: 0; transform: scale(0.85) translateY(20px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* 弹窗标题 */
+#modal-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--purple-ghost);
+  margin-bottom: 16px;
+  letter-spacing: 1px;
+}
+
+/* 弹窗内容文字 */
+#modal-content {
+  font-size: 15px;
+  color: var(--purple-soft);
+  line-height: 1.7;
+  margin-bottom: 22px;
+  /* 允许长链接换行 */
+  word-break: break-all;
+  /* 用户可选中文字复制 */
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+/* 弹窗关闭按钮 */
+#modal-close {
+  padding: 10px 36px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--purple-ghost);
+  /* 紫色渐变按钮背景 */
+  background: linear-gradient(135deg, var(--purple-mid), var(--purple-deep));
+  border: none;
+  border-radius: 25px;       /* 胶囊形状 */
+  cursor: pointer;
+  letter-spacing: 1px;
+  /* 过渡动画 */
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* 关闭按钮悬浮效果 */
+#modal-close:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 18px rgba(124, 58, 237, 0.5);
+}
+
+/* 关闭按钮点击效果 */
+#modal-close:active {
+  transform: scale(0.96);
+}
+
+/* ============================================================
+   响应式适配：大屏幕设备
+   当屏幕宽度 ≥ 768px 时，略微增大字号
+   ============================================================ */
+@media (min-width: 768px) {
+  .card {
+    padding: 36px 32px 28px;
+  }
+
+  .real-name {
+    font-size: 26px;
+  }
+
+  .nickname {
+    font-size: 17px;
+  }
+
+  .english-id {
+    font-size: 15px;
+  }
+
+  .info-row {
+    font-size: 15px;
+  }
+
+  .avatar-container {
+    width: 100px;
+    height: 100px;
+  }
+}
