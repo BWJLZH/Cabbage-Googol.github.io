@@ -1,13 +1,17 @@
 # ============================================================
 # Netlify 部署配置 — gaokaoschool
+#
+# ★ 因为项目在仓库的子目录 campus-explorer-v2/ 里，
+#    必须设置 base 告诉 Netlify 从哪里运行构建命令
 # ============================================================
 
 [build]
-  command = "npm run build"
-  publish = "dist"
+  base = "campus-explorer-v2"      # ← 关键！package.json 所在的子目录
+  command = "npm run build"        # 在 base 目录内执行
+  publish = "dist"                 # 构建输出目录（相对于 base）
 
 # ============================================================
-# AI API 代理 — 生产环境转发 /api/ai/* 到真实 API
+# AI API 代理
 # ============================================================
 [[redirects]]
   from = "/api/ai/*"
