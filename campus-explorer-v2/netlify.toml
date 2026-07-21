@@ -1,20 +1,9 @@
 # ============================================================
-# Netlify 部署配置 — gaokaoschool
-#
-# ★ 因为项目在仓库的子目录 campus-explorer-v2/ 里，
-#    必须设置 base 告诉 Netlify 从哪里运行构建命令
+# Netlify 构建配置
+# 重定向规则请查看 public/_redirects
 # ============================================================
 
 [build]
-  base = "campus-explorer-v2"      # ← 关键！package.json 所在的子目录
-  command = "npm run build"        # 在 base 目录内执行
-  publish = "dist"                 # 构建输出目录（相对于 base）
-
-# ============================================================
-# AI API 代理
-# ============================================================
-[[redirects]]
-  from = "/api/ai/*"
-  to = "https://dashscope.aliyuncs.com/:splat"
-  status = 200
-  force = true
+  base = "campus-explorer-v2"      # package.json 在仓库子目录
+  command = "npm run build"
+  publish = "dist"
