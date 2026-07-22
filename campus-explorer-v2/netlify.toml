@@ -1,9 +1,0 @@
-# ============================================================
-# Netlify 构建配置
-# 重定向规则请查看 public/_redirects
-# ============================================================
-
-[build]
-  base = "campus-explorer-v2"      # package.json 在仓库子目录
-  command = "npm run build"
-  publish = "dist"

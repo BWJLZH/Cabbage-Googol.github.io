@@ -54,21 +54,23 @@ const AI_CONFIG = {
 }
 
 // ============================================================
-// 构建请求 URL — 始终走代理，不区分环境
-//
-// 开发环境：Vite 代理（vite.config.js）转发 /api/ai/* → 真实 API
-// 生产环境：Netlify 代理（netlify.toml）转发 /api/ai/* → 真实 API
-//
-// 因为浏览器不允许跨域直连 AI API，所以永远走同源代理路径
+// 构建请求 URL — 开发模式走 Vite 代理，生产模式直连
 // ============================================================
 function getRequestUrl() {
-  try {
-    const url = new URL(AI_CONFIG.apiUrl)
-    return '/api/ai' + url.pathname + url.search
-  } catch {
-    // apiUrl 格式不对时返回原值（便于在控制台看到具体错误）
-    return AI_CONFIG.apiUrl
+  // 开发环境：通过 Vite 代理转发，绕过浏览器 CORS 限制
+  //   /api/ai/apps/anthropic → Vite 改写为 /apps/anthropic
+  //   → 转发到 https://dashscope.aliyuncs.com
+  if (import.meta.env.DEV) {
+    try {
+      const url = new URL(AI_CONFIG.apiUrl)
+      return '/api/ai' + url.pathname + url.search
+    } catch {
+      // 如果 apiUrl 格式不对，直接返回原值（会触发 CORS 报错，便于排查）
+      return AI_CONFIG.apiUrl
+    }
   }
+  // 生产环境：需要后端反向代理处理 CORS
+  return AI_CONFIG.apiUrl
 }
 
 // ============================================================
