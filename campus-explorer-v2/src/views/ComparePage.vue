@@ -1,7 +1,7 @@
 <template>
   <div class="page">
     <div class="pg-head">
-      <button class="back" @click="$router.push('/')">← 返回</button>
+      <!-- <button class="back" @click="$router.push('/')">← 返回</button> -->
       <h1>学校对比</h1>
     </div>
     <div class="empty" v-if="!list.length" style="padding:80px 0">
