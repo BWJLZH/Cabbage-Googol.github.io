@@ -14,26 +14,26 @@
       -->
     <nav class="bottom-nav" v-if="showNav">
       <!-- 首页 -->
-      <router-link to="/" class="nav-item" :class="{ active: $route.path === '/' }">
+      <router-link to="/" class="nav-item" :class="{ active: $route.path === '/' }" replace>
         <span class="nav-icon">⌂</span>
         <span class="nav-label">首页</span>
       </router-link>
 
       <!-- 对比 — 含数量角标 -->
-      <router-link to="/compare" class="nav-item" :class="{ active: $route.path === '/compare' }">
+      <router-link to="/compare" class="nav-item" :class="{ active: $route.path === '/compare' }" replace>
         <span class="nav-icon">◫</span>
         <span class="nav-label">对比</span>
         <span class="nav-badge" v-if="compareCount">{{ compareCount }}</span>
       </router-link>
 
       <!-- 社区 -->
-      <router-link to="/community" class="nav-item" :class="{ active: $route.path === '/community' }">
+      <router-link to="/community" class="nav-item" :class="{ active: $route.path === '/community' }" replace>
         <span class="nav-icon">◈</span>
         <span class="nav-label">社区</span>
       </router-link>
 
       <!-- 我的 — 最右侧，图标使用几何圆形，跟 ⌂ ◫ ◈ 风格统一 -->
-      <router-link to="/profile" class="nav-item" :class="{ active: $route.path === '/profile' }">
+      <router-link to="/profile" class="nav-item" :class="{ active: $route.path === '/profile' }" replace>
         <!--
           未登录：空心圆（currentColor 继承父级颜色，激活时自动变暖色）
           已登录：实心圆 + 昵称首字（同样跟随 currentColor 变色）

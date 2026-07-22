@@ -86,10 +86,14 @@
     </transition>
 
     <!-- ========== 悬浮球按钮 ========== -->
+    <!--
+      注意：没有 @click，点击/拖拽统一由 startDrag / stopDrag 处理。
+      touchstart 的 .prevent 会阻止移动端 click 事件，
+      所以不能依赖 click —— 在 stopDrag 中通过位移距离区分"点击"和"拖拽"。
+    -->
     <button
       class="ai-ball"
       :class="{ 'ai-ball--open': isOpen }"
-      @click="togglePanel"
       @mousedown.prevent="startDrag"
       @touchstart.prevent="startDrag"
       ref="ballRef"
@@ -212,7 +216,11 @@ function resetPosition() {
 }
 
 function startDrag(e) {
-  if (isOpen.value) return  // 面板展开时不允许拖拽
+  // 面板展开时：不启动拖拽，直接关闭面板
+  if (isOpen.value) {
+    togglePanel()
+    return
+  }
 
   dragging.value = true
   const touch = e.touches ? e.touches[0] : e
@@ -248,12 +256,25 @@ function onDrag(e) {
   position.y = newY
 }
 
-function stopDrag() {
+function stopDrag(e) {
+  // 判断是"点击"还是"拖拽"：位移 < 5px 视为点击
+  const touch = (e.touches && e.touches[0]) || (e.changedTouches && e.changedTouches[0])
+  const endX = touch ? touch.clientX : e.clientX
+  const endY = touch ? touch.clientY : e.clientY
+  const dx = endX - dragStart.x
+  const dy = endY - dragStart.y
+  const moved = Math.sqrt(dx * dx + dy * dy)
+
   dragging.value = false
   window.removeEventListener('mousemove', onDrag)
   window.removeEventListener('mouseup', stopDrag)
   window.removeEventListener('touchmove', onDrag)
   window.removeEventListener('touchend', stopDrag)
+
+  // 几乎没有位移 → 这是点击，不是拖拽
+  if (moved < 5) {
+    togglePanel()
+  }
 }
 
 // ============================================================

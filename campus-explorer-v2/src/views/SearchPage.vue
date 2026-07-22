@@ -1,7 +1,7 @@
 <template>
   <div class="page">
     <div class="sr-head">
-      <button class="back" @click="$router.push('/')">←</button>
+      <button class="back" @click="$router.back()">←</button>
       <div class="search-box" style="flex:1">
         <span class="s-icon">⊙</span>
         <input

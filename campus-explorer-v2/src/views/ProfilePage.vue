@@ -312,7 +312,7 @@ async function handleChangePassword() {
 function handleLogout() {
   authStore.logout()
   // 退出后自动回到首页
-  router.push('/')
+  router.replace('/')
 }
 </script>
 
