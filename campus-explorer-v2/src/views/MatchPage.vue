@@ -1,7 +1,7 @@
 <template>
   <div class="page">
     <div class="pg-head">
-      <button class="back" @click="$router.back()">← 返回</button>
+      <!-- <button class="back" @click="$router.back()">← 返回</button> -->
       <h1>AI 志愿匹配</h1>
     </div>
 
