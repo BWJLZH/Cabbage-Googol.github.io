@@ -5,7 +5,7 @@
       <h1>学校对比</h1>
     </div>
     <div class="empty" v-if="!list.length" style="padding:80px 0">
-      <span class="empty-icon">◫</span>
+      <span class="empty-icon"><PhArrowsLeftRight :size="40" /></span>
       <p>还没有添加对比学校</p>
       <p class="eh">在详情页点击"对比"按钮添加</p>
     </div>
@@ -14,7 +14,7 @@
       <div class="cmp-headers">
         <div class="cmp-label"></div>
         <div class="cmp-col" v-for="s in list" :key="s.slug">
-          <button class="rmv" @click="toggleComp(s.slug)">✕</button>
+          <button class="rmv" @click="toggleComp(s.slug)"><PhX :size="12" /></button>
           <span class="cmp-emoji">{{ s._emoji }}</span>
           <h3>{{ s.name }}</h3>
           <span class="cmp-type">{{ s.type }}</span>
@@ -50,7 +50,8 @@
           >
             <template v-if="typeof s.dormitory[it.k] === 'boolean'">
               <span :class="{ dy: s.dormitory[it.k], dn: !s.dormitory[it.k] }">
-                {{ s.dormitory[it.k] ? '✓' : '✗' }}
+                <PhCheck :size="16" v-if="s.dormitory[it.k]" />
+                <PhX :size="16" v-else />
               </span>
             </template>
             <template v-else>
@@ -71,6 +72,7 @@
 import { ref, computed } from 'vue'
 import { SCHOOLS } from '../data/schools.js'
 import { loadLS, saveLS } from '../utils/storage.js'
+import { PhX, PhCheck, PhArrowsLeftRight } from '@phosphor-icons/vue'
 
 const compareList = ref(loadLS('cx-cmp', []))
 

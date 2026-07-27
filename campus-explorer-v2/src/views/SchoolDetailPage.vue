@@ -4,13 +4,13 @@
     <div class="cover" :style="{ background: s._bg }">
       <span class="cover-emoji">{{ s._emoji }}</span>
       <button class="cover-back" @click="$router.back()">
-        <span>←</span>
+        <span><PhArrowLeft :size="18" /></span>
       </button>
       <div class="cover-acts">
         <button :class="{ on: isFav }" @click="toggleFav">
-          {{ isFav ? '★' : '☆' }}
+          <PhStar :size="18" :weight="isFav ? 'fill' : 'regular'" />
         </button>
-        <button @click="shareIt">↗</button>
+        <button @click="shareIt"><PhShare :size="18" /></button>
       </div>
     </div>
 
@@ -23,7 +23,7 @@
         <span>{{ s.province }}</span>
       </div>
       <div class="d-profile">
-        <span class="pf-icon">✦</span>
+        <span class="pf-icon"><PhSparkle :size="20" /></span>
         <p>{{ s.profile }}</p>
       </div>
     </div>
@@ -63,7 +63,8 @@
         <div class="dorm-icons">
           <div class="di" v-for="it in dormQuick" :key="it.l">
             <span class="di-icon" :class="it.v ? 'yes' : 'no'">
-              {{ it.v ? '✓' : '✗' }}
+              <PhCheck :size="18" v-if="it.v" />
+              <PhX :size="18" v-else />
             </span>
             <span>{{ it.l }}</span>
           </div>
@@ -73,9 +74,9 @@
           <span class="dd-v">{{ it.v }}</span>
         </div>
         <div class="dorm-note" v-if="s.dormitory.note">
-          <span>!</span>{{ s.dormitory.note }}
+          <span><PhWarning :size="14" /></span>{{ s.dormitory.note }}
         </div>
-        <p class="dorm-conf">✓ {{ s.dormitory.confirmed_by }} 位学长确认</p>
+        <p class="dorm-conf"><PhCheck :size="14" /> {{ s.dormitory.confirmed_by }} 位学长确认</p>
       </div>
     </div>
 
@@ -112,15 +113,15 @@
               <span class="rv-src">{{ r.source }}</span>
             </div>
           </div>
-          <span class="rv-star">★ {{ r.rating.综合 }}</span>
+          <span class="rv-star"><PhStar :size="14" weight="fill" /> {{ r.rating.综合 }}</span>
         </div>
         <p class="rv-content">{{ r.content }}</p>
         <div class="rv-foot">
           <span>{{ r.created_at }}</span>
-          <button @click="r.helpful++">▲ 有用({{ r.helpful }})</button>
+          <button @click.stop="r.helpful++"><PhCaretUp :size="14" /> 有用({{ r.helpful }})</button>
         </div>
       </div>
-      <button class="write-btn" @click="showReview = true">✎ 写评价</button>
+      <button class="write-btn" @click="showReview = true"><PhNotePencil :size="16" /> 写评价</button>
     </div>
 
     <!-- AI Q&A -->
@@ -128,7 +129,7 @@
       <h3 class="sl">AI 学长问答</h3>
       <div class="ai-card">
         <div class="ai-header">
-          <span class="ai-avatar">🎓</span>
+          <span class="ai-avatar"><PhGraduationCap :size="24" /></span>
           <div>
             <span class="ai-name">{{ s.name }}学长</span>
             <span class="ai-on">在线</span>
@@ -149,7 +150,7 @@
             @keyup.enter="ask(aq)"
             placeholder="输入问题..."
           >
-          <button @click="ask(aq)" :disabled="!aq.trim()">→</button>
+          <button @click="ask(aq)" :disabled="!aq.trim()"><PhPaperPlaneRight :size="18" /></button>
         </div>
         <p class="ai-note">内容由AI生成，仅供参考</p>
       </div>
@@ -158,16 +159,16 @@
     <!-- Bottom Bar -->
     <div class="bottom-bar">
       <button :class="{ on: isComp }" @click="toggleComp">
-        <span>◫</span>{{ isComp ? '已加入' : '对比' }}
+        <span><PhArrowsLeftRight :size="18" /></span>{{ isComp ? '已加入' : '对比' }}
       </button>
       <button :class="{ on: isFav }" @click="toggleFav">
-        <span>{{ isFav ? '★' : '☆' }}</span>收藏
+        <span><PhStar :size="18" :weight="isFav ? 'fill' : 'regular'" /></span>收藏
       </button>
       <button @click="shareIt">
-        <span>↗</span>分享
+        <span><PhShare :size="18" /></span>分享
       </button>
       <button class="primary" @click="showReview = true">
-        <span>✎</span>写评价
+        <span><PhNotePencil :size="18" /></span>写评价
       </button>
     </div>
 
@@ -177,7 +178,10 @@
         <h3>写评价</h3>
         <div class="stars-row">
           <span>综合评分</span>
-          <span class="stars">{{ '★'.repeat(rating) }}{{ '☆'.repeat(5 - rating) }}</span>
+          <span class="stars">
+        <PhStar v-for="i in rating" :key="'fs'+i" :size="20" weight="fill" />
+        <PhStar v-for="i in (5 - rating)" :key="'es'+i" :size="20" />
+      </span>
         </div>
         <div class="star-btns">
           <button
@@ -186,7 +190,7 @@
             :class="{ on: i <= rating }"
             @click="rating = i"
           >
-            ★
+            <PhStar :size="24" :weight="i <= rating ? 'fill' : 'regular'" />
           </button>
         </div>
         <textarea
@@ -215,6 +219,7 @@ import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { SCHOOLS } from '../data/schools.js'
 import { loadLS, saveLS } from '../utils/storage.js'
+import { PhArrowLeft, PhStar, PhShare, PhSparkle, PhCheck, PhX, PhWarning, PhNotePencil, PhGraduationCap, PhPaperPlaneRight, PhArrowsLeftRight, PhCaretUp } from '@phosphor-icons/vue'
 
 const route = useRoute()
 const router = useRouter()

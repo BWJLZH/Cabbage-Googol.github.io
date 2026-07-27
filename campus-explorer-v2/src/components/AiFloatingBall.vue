@@ -16,13 +16,13 @@
         <!-- 头部 -->
         <div class="ai-panel-header">
           <div class="ai-panel-brand">
-            <span class="ai-panel-avatar">🎓</span>
+            <span class="ai-panel-avatar"><PhGraduationCap :size="22" /></span>
             <div>
               <span class="ai-panel-title">AI 学长</span>
               <span class="ai-panel-sub">校园搜助手</span>
             </div>
           </div>
-          <button class="ai-panel-close" @click="isOpen = false">✕</button>
+          <button class="ai-panel-close" @click="isOpen = false"><PhX :size="16" /></button>
         </div>
 
         <!-- 消息区 -->
@@ -80,7 +80,7 @@
             class="ai-send"
             :disabled="!inputText.trim() || isLoading"
             @click="send"
-          >→</button>
+          ><PhPaperPlaneRight :size="18" /></button>
         </div>
       </div>
     </transition>
@@ -98,8 +98,8 @@
       @touchstart.prevent="startDrag"
       ref="ballRef"
     >
-      <span v-if="!isOpen">✨</span>
-      <span v-else>✕</span>
+      <span v-if="!isOpen"><PhSparkle :size="20" /></span>
+      <span v-else><PhX :size="20" /></span>
     </button>
   </div>
 </template>
@@ -110,6 +110,7 @@
 // ============================================================
 import { ref, reactive, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { fetchAIResponseStream, isApiConfigured } from '../services/aiService.js'
+import { PhSparkle, PhX, PhGraduationCap, PhPaperPlaneRight } from '@phosphor-icons/vue'
 
 // ============================================================
 // 面板开关

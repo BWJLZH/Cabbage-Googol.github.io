@@ -1,9 +1,30 @@
 <template>
   <div class="auth-page">
-    <!-- 背景图占位 — 替换 --bg-image 变量即可 -->
+    <!-- ========== 系统名称 — 醒目展示 ========== -->
+    <div class="auth-brand">
+      <h1 class="brand-title">找到最适合</h1>
+      <h2 class="brand-accent">你的大学</h2>
+      <p class="brand-desc">像翻阅一本校园年鉴，浏览真实宿舍、食堂口碑、学长评价</p>
+    </div>
+
+    <!-- ========== 登录卡片 ========== -->
     <div class="auth-card">
-      <!-- 切换 Tab -->
-      <div class="auth-tabs">
+      <!-- 身份切换 Tab -->
+      <div class="identity-tabs">
+        <button
+          v-for="tab in identityTabs"
+          :key="tab.key"
+          class="identity-tab"
+          :class="{ active: identity === tab.key }"
+          :style="identity === tab.key ? { color: tab.color, borderColor: tab.color } : {}"
+          @click="switchIdentity(tab.key)"
+        >
+          {{ tab.label }}
+        </button>
+      </div>
+
+      <!-- 登录/注册切换 — 仅学生/家长显示注册入口，其他身份仅提供登录 -->
+      <div class="auth-tabs" v-if="identity !== 'admin'">
         <button
           class="auth-tab"
           :class="{ active: mode === 'login' }"
@@ -15,10 +36,14 @@
           @click="switchMode('register')"
         >注册</button>
       </div>
+      <div class="auth-tabs" v-else>
+        <span class="admin-login-label">登录</span>
+      </div>
 
-      <!-- ========== 登录表单 ========== -->
+      <!-- ============================================================
+           登录表单
+           ============================================================ -->
       <form v-if="mode === 'login'" @submit.prevent="handleLogin" novalidate>
-        <!-- 用户名 -->
         <div class="field">
           <label class="field-label">用户名 / 邮箱</label>
           <input
@@ -31,7 +56,6 @@
           <p class="field-error" v-if="loginErrors.username">{{ loginErrors.username }}</p>
         </div>
 
-        <!-- 密码 -->
         <div class="field">
           <label class="field-label">密码</label>
           <input
@@ -45,15 +69,24 @@
           <p class="field-error" v-if="loginErrors.password">{{ loginErrors.password }}</p>
         </div>
 
+        <!-- 当前身份提示 -->
+        <p class="identity-hint" v-if="identity !== 'admin'">
+          以<span class="hint-role">{{ identityLabel }}</span>身份登录
+        </p>
+        <p class="identity-hint identity-hint--admin" v-else>
+          请登录您的账号
+        </p>
+
         <button class="auth-btn" type="submit" :disabled="loginLoading">
           <span class="spinner" v-if="loginLoading"></span>
           {{ loginLoading ? '登录中...' : '登 录' }}
         </button>
       </form>
 
-      <!-- ========== 注册表单 ========== -->
-      <form v-if="mode === 'register'" @submit.prevent="handleRegister" novalidate>
-        <!-- 用户名 -->
+      <!-- ============================================================
+           注册表单 — 仅学生/家长
+           ============================================================ -->
+      <form v-if="mode === 'register' && identity !== 'admin'" @submit.prevent="handleRegister" novalidate>
         <div class="field">
           <label class="field-label">用户名</label>
           <input
@@ -66,7 +99,6 @@
           <p class="field-error" v-if="registerErrors.username">{{ registerErrors.username }}</p>
         </div>
 
-        <!-- 邮箱 -->
         <div class="field">
           <label class="field-label">邮箱</label>
           <input
@@ -80,7 +112,6 @@
           <p class="field-error" v-if="registerErrors.email">{{ registerErrors.email }}</p>
         </div>
 
-        <!-- 密码 -->
         <div class="field">
           <label class="field-label">密码</label>
           <input
@@ -94,7 +125,6 @@
           <p class="field-error" v-if="registerErrors.password">{{ registerErrors.password }}</p>
         </div>
 
-        <!-- 确认密码 -->
         <div class="field">
           <label class="field-label">确认密码</label>
           <input
@@ -108,6 +138,10 @@
           <p class="field-error" v-if="registerErrors.confirmPassword">{{ registerErrors.confirmPassword }}</p>
         </div>
 
+        <p class="identity-hint">
+          注册为<span class="hint-role">{{ identityLabel }}</span>身份
+        </p>
+
         <button class="auth-btn" type="submit" :disabled="registerLoading">
           <span class="spinner" v-if="registerLoading"></span>
           {{ registerLoading ? '注册中...' : '注 册' }}
@@ -118,34 +152,61 @@
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue'
+import { reactive, ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth.js'
 
-// ============================================================
-// 注入 auth store — 登录/注册成功后通过 store 通知父组件
-// ============================================================
 const authStore = useAuthStore()
+const router = useRouter()
 
 // ============================================================
-// 当前模式：'login' | 'register'
+// 身份切换
+// ============================================================
+const identityTabs = [
+  { key: 'student', label: '学生', color: '#4A90D9' },
+  { key: 'parent', label: '家长', color: '#5B9A6B' },
+  { key: 'admin', label: '其他', color: '#B87351' }
+]
+const identity = ref('student')
+
+const identityLabel = computed(() => {
+  const tab = identityTabs.find(t => t.key === identity.value)
+  return tab ? tab.label : ''
+})
+
+function switchIdentity(key) {
+  identity.value = key
+  if (key === 'admin') {
+    // 管理员只有登录，强制切到登录模式
+    mode.value = 'login'
+  }
+  clearAllErrors()
+}
+
+// ============================================================
+// 登录/注册模式
 // ============================================================
 const mode = ref('login')
 
+function switchMode(m) {
+  mode.value = m
+  clearAllErrors()
+}
+
+function clearAllErrors() {
+  Object.keys(loginErrors).forEach(k => loginErrors[k] = '')
+  Object.keys(registerErrors).forEach(k => registerErrors[k] = '')
+}
+
 // ============================================================
-// 登录表单数据
+// 登录表单
 // ============================================================
-const loginForm = reactive({
-  username: '',
-  password: ''
-})
-const loginErrors = reactive({
-  username: '',
-  password: ''
-})
+const loginForm = reactive({ username: '', password: '' })
+const loginErrors = reactive({ username: '', password: '' })
 const loginLoading = ref(false)
 
 // ============================================================
-// 注册表单数据
+// 注册表单
 // ============================================================
 const registerForm = reactive({
   username: '',
@@ -160,25 +221,6 @@ const registerErrors = reactive({
   confirmPassword: ''
 })
 const registerLoading = ref(false)
-
-// ============================================================
-// 切换模式 — 清空所有表单和错误
-// ============================================================
-function switchMode(m) {
-  mode.value = m
-  // 清空登录
-  loginForm.username = ''
-  loginForm.password = ''
-  Object.keys(loginErrors).forEach(k => loginErrors[k] = '')
-  loginLoading.value = false
-  // 清空注册
-  registerForm.username = ''
-  registerForm.email = ''
-  registerForm.password = ''
-  registerForm.confirmPassword = ''
-  Object.keys(registerErrors).forEach(k => registerErrors[k] = '')
-  registerLoading.value = false
-}
 
 // ============================================================
 // 清除单个字段错误
@@ -208,32 +250,21 @@ function validateLogin() {
 }
 
 async function handleLogin() {
-  // 清除旧错误
   Object.keys(loginErrors).forEach(k => loginErrors[k] = '')
 
   if (!validateLogin()) return
 
   loginLoading.value = true
   try {
-    // ============================================================
-    // TODO: 接入真实后端时，替换为 fetch API 调用：
-    // const res = await fetch('/api/auth/login', {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify({
-    //     username: loginForm.username,
-    //     password: loginForm.password
-    //   })
-    // })
-    // const data = await res.json()
-    // if (!res.ok) throw new Error(data.message || '登录失败')
-    // localStorage.setItem('token', data.token)
-    // ============================================================
-
-    // 当前：调用 auth store 的 login 方法（localStorage 模拟后端）
     await authStore.login(loginForm.username, loginForm.password)
-    // 登录成功后，authStore.currentUser 会被设置，
-    // 父组件（ProfilePage）通过 isLoggedIn 响应式自动切换视图
+
+    // 管理员登录后检查角色是否为 admin
+    // 非管理员试图以管理员身份登录时，用户名/密码错误会直接抛异常
+    loginForm.username = ''
+    loginForm.password = ''
+
+    // 登录成功 → 跳转首页
+    router.replace('/')
   } catch (err) {
     loginErrors.username = err.message || '登录失败，请重试'
   } finally {
@@ -242,12 +273,11 @@ async function handleLogin() {
 }
 
 // ============================================================
-// 注册校验 & 提交
+// 注册校验 & 提交 — 角色由当前身份 Tab 决定
 // ============================================================
 function validateRegister() {
   let valid = true
 
-  // 用户名：不能为空 + 3-20位
   if (!registerForm.username.trim()) {
     registerErrors.username = '用户名不能为空'
     valid = false
@@ -256,7 +286,6 @@ function validateRegister() {
     valid = false
   }
 
-  // 邮箱格式
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
   if (!registerForm.email.trim()) {
     registerErrors.email = '邮箱不能为空'
@@ -266,7 +295,6 @@ function validateRegister() {
     valid = false
   }
 
-  // 密码：不能为空 + 至少6位
   if (!registerForm.password) {
     registerErrors.password = '密码不能为空'
     valid = false
@@ -275,7 +303,6 @@ function validateRegister() {
     valid = false
   }
 
-  // 确认密码一致
   if (!registerForm.confirmPassword) {
     registerErrors.confirmPassword = '请确认密码'
     valid = false
@@ -288,41 +315,29 @@ function validateRegister() {
 }
 
 async function handleRegister() {
-  // 清除旧错误
   Object.keys(registerErrors).forEach(k => registerErrors[k] = '')
 
   if (!validateRegister()) return
 
   registerLoading.value = true
   try {
-    // ============================================================
-    // TODO: 接入真实后端时，替换为 fetch API 调用：
-    // const res = await fetch('/api/auth/register', {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify({
-    //     username: registerForm.username.trim(),
-    //     email: registerForm.email.trim(),
-    //     password: registerForm.password
-    //   })
-    // })
-    // const data = await res.json()
-    // if (!res.ok) throw new Error(data.message || '注册失败')
-    // ============================================================
-
-    // 当前：调用 auth store 的 register 方法（localStorage 模拟后端）
     await authStore.register(
       registerForm.username.trim(),
       registerForm.email.trim(),
-      registerForm.password
+      registerForm.password,
+      identity.value   // 角色来自身份 Tab
     )
-    // 注册成功后自动切到登录模式，让用户用新账号登录
-    mode.value = 'login'
-    // 清空注册表单
+
+    // 注册成功 → 自动登录
+    await authStore.login(registerForm.username.trim(), registerForm.password)
+
+    // 清空表单
     registerForm.username = ''
     registerForm.email = ''
     registerForm.password = ''
     registerForm.confirmPassword = ''
+
+    router.replace('/')
   } catch (err) {
     registerErrors.username = err.message || '注册失败，请重试'
   } finally {
@@ -333,31 +348,56 @@ async function handleRegister() {
 
 <style scoped>
 /* ============================================================
-   背景图变量 — 替换为你自己的图片
+   整体布局
    ============================================================ */
 .auth-page {
-  /*
-   * TODO: 替换背景图
-   * background-image: url('@/assets/auth-bg.jpg');
-   * 或者用渐变 + 图片叠加:
-   * background: linear-gradient(135deg, rgba(0,0,0,.15), rgba(0,0,0,.05)), url('@/assets/auth-bg.jpg');
-   */
-  --bg-image: none; /* ← 替换为 url(...) */
-  background-image: var(--bg-image);
-  background-color: var(--bg); /* 统一用产品背景色 #FCFCFA */
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-
   min-height: 100dvh;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 24px;
+  padding: 32px 20px;
+  background: var(--bg);
 }
 
 /* ============================================================
-   卡片 — 沿用产品 card 风格：白色底 + 细边框 + 轻阴影
+   系统名称 — 醒目配色
+   ============================================================ */
+.auth-brand {
+  text-align: center;
+  margin-bottom: 36px;
+}
+
+.brand-title {
+  font-family: var(--font-heading);
+  font-size: 44px;
+  font-weight: 900;
+  line-height: 1.15;
+  color: var(--text);
+  margin-bottom: 2px;
+}
+
+.brand-accent {
+  font-family: var(--font-heading);
+  font-size: 44px;
+  font-weight: 900;
+  line-height: 1.15;
+  margin-bottom: 16px;
+  background: linear-gradient(135deg, #B87351 0%, #D4946A 40%, #8BA38C 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.brand-desc {
+  font-size: 15px;
+  color: var(--text2);
+  line-height: 1.7;
+  letter-spacing: .02em;
+}
+
+/* ============================================================
+   卡片
    ============================================================ */
 .auth-card {
   width: 100%;
@@ -366,22 +406,57 @@ async function handleRegister() {
   border: 1px solid var(--bdr);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow);
-  padding: 36px 28px 32px;
+  padding: 28px 24px 32px;
 }
 
 /* ============================================================
-   切换 Tab — 暖色系
+   身份切换 Tab — 三色系统
+   ============================================================ */
+.identity-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-bottom: 24px;
+  background: var(--surface2);
+  border-radius: 10px;
+  padding: 4px;
+}
+
+.identity-tab {
+  padding: 10px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text2);
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all .2s;
+  border-bottom: 2px solid transparent;
+}
+
+.identity-tab.active {
+  background: var(--surface);
+  box-shadow: 0 1px 3px rgba(0,0,0,.06);
+}
+
+.identity-tab:hover:not(.active) {
+  color: var(--text);
+}
+
+/* ============================================================
+   登录/注册切换
    ============================================================ */
 .auth-tabs {
   display: flex;
-  margin-bottom: 32px;
+  margin-bottom: 24px;
   border-bottom: 2px solid var(--bdr);
 }
 
 .auth-tab {
   flex: 1;
-  padding: 12px 0;
-  font-size: 16px;
+  padding: 10px 0;
+  font-size: 15px;
   font-weight: 500;
   color: var(--text3);
   background: none;
@@ -392,7 +467,6 @@ async function handleRegister() {
   transition: all .2s;
 }
 
-/* 激活态：暖色 accent2 */
 .auth-tab.active {
   color: var(--accent2);
   border-bottom-color: var(--accent2);
@@ -402,11 +476,23 @@ async function handleRegister() {
   color: var(--text2);
 }
 
+.admin-login-label {
+  display: block;
+  width: 100%;
+  text-align: center;
+  padding: 10px 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text2);
+  border-bottom: 2px solid var(--bdr);
+  margin-bottom: 24px;
+}
+
 /* ============================================================
-   表单字段 — 产品统一风格
+   表单字段
    ============================================================ */
 .field {
-  margin-bottom: 20px;
+  margin-bottom: 18px;
 }
 
 .field-label {
@@ -434,14 +520,12 @@ async function handleRegister() {
   color: var(--text3);
 }
 
-/* 聚焦态：暖色光晕 */
 .field-input:focus {
   border-color: var(--accent2);
   box-shadow: 0 0 0 3px rgba(184, 115, 81, .1);
   background: var(--surface);
 }
 
-/* 错误态：产品内建的 warn 色 */
 .field-input--error {
   border-color: var(--warn);
 }
@@ -450,24 +534,39 @@ async function handleRegister() {
   box-shadow: 0 0 0 3px rgba(196, 112, 98, .1);
 }
 
-/* ============================================================
-   错误提示 — 红字，与产品 warn 色一致
-   ============================================================ */
 .field-error {
   color: var(--warn);
   font-size: 13px;
   margin-top: 6px;
   line-height: 1.4;
-  min-height: 0; /* 不占位，由 v-if 控制 */
 }
 
 /* ============================================================
-   提交按钮 — 深底白字，与首页 CTA 按钮、底部操作栏风格一致
+   身份提示
+   ============================================================ */
+.identity-hint {
+  text-align: center;
+  font-size: 13px;
+  color: var(--text3);
+  margin-bottom: 12px;
+}
+
+.hint-role {
+  font-weight: 600;
+  color: var(--accent2);
+}
+
+.identity-hint--admin {
+  color: var(--text2);
+}
+
+/* ============================================================
+   提交按钮
    ============================================================ */
 .auth-btn {
   width: 100%;
   padding: 14px 0;
-  margin-top: 8px;
+  margin-top: 4px;
   font-size: 16px;
   font-weight: 600;
   color: var(--bg);
@@ -479,7 +578,7 @@ async function handleRegister() {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  transition: background .2s, opacity .2s;
+  transition: all .2s;
 }
 
 .auth-btn:hover:not(:disabled) {
@@ -504,8 +603,7 @@ async function handleRegister() {
 }
 
 @keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
+  to { transform: rotate(360deg); }
 }
+
 </style>

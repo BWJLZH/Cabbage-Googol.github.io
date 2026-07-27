@@ -30,19 +30,19 @@
               <span class="rv-src">{{ r.author }} · {{ r.created_at }}</span>
             </div>
           </div>
-          <span class="rv-star">★ {{ r.rating?.综合 || '-' }}</span>
+          <span class="rv-star"><PhStar :size="14" weight="fill" /> {{ r.rating?.综合 || '-' }}</span>
         </div>
         <p class="rv-content">{{ r.content }}</p>
         <div class="rv-foot">
           <span class="r-src-tag">{{ r.source }}</span>
           <button @click.stop="r.helpful = (r.helpful || 0) + 1">
-            ▲ 有用({{ r.helpful || 0 }})
+            <PhCaretUp :size="14" /> 有用({{ r.helpful || 0 }})
           </button>
         </div>
       </div>
     </div>
     <div v-else class="empty" style="padding:80px 0">
-      <span class="empty-icon">◈</span>
+      <span class="empty-icon"><PhUsersThree :size="40" /></span>
       <p>还没有评价</p>
     </div>
   </div>
@@ -52,6 +52,7 @@
 import { ref, computed } from 'vue'
 import { SCHOOLS } from '../data/schools.js'
 import { loadLS } from '../utils/storage.js'
+import { PhStar, PhCaretUp, PhUsersThree } from '@phosphor-icons/vue'
 
 const af = ref('all')
 const dims = ['宿舍', '食堂', '教学', '环境', '社交']

@@ -1,5 +1,9 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
+import { useAuthStore } from '../stores/auth.js'
 
+// ============================================================
+// 路由定义
+// ============================================================
 const routes = [
   {
     path: '/',
@@ -35,6 +39,9 @@ const routes = [
     component: () => import('../views/CommunityPage.vue'),
     meta: { tab: true }
   },
+  // ==========================================================
+  // 登录/注册页 — 唯一公开路由，不需要登录即可访问
+  // ==========================================================
   {
     path: '/auth',
     name: 'auth',
@@ -45,6 +52,12 @@ const routes = [
     name: 'profile',
     component: () => import('../views/ProfilePage.vue'),
     meta: { tab: true }
+  },
+  {
+    path: '/admin',
+    name: 'admin',
+    component: () => import('../views/AdminPage.vue'),
+    meta: { adminOnly: true }
   },
   {
     path: '/:pathMatch(.*)*',
@@ -61,20 +74,51 @@ const router = createRouter({
 })
 
 // ============================================================
+// 全局前置守卫 — 强制登录 + 会话过期检测
+//
+// 规则：
+//   1. /auth（登录页）→ 直接放行（已登录用户会由组件自行跳转）
+//   2. 未登录 → 强制跳转 /auth
+//   3. 已登录但会话过期 → 自动登出 + 跳转 /auth
+//   4. 已登录且有效 → 放行
+//   5. 管理员路由 → 仅 admin 角色可访问
+// ============================================================
+router.beforeEach((to, from, next) => {
+  // 登录页直接放行
+  if (to.path === '/auth') {
+    return next()
+  }
+
+  // 需要 Pinia 实例已挂载（main.js 中 app.use(pinia) 在 router 之前）
+  const authStore = useAuthStore()
+
+  // 未登录
+  if (!authStore.isLoggedIn) {
+    return next('/auth')
+  }
+
+  // 已登录但会话已过期
+  if (!authStore.checkSession()) {
+    return next('/auth')
+  }
+
+  // 管理员路由仅 admin 可访问
+  if (to.meta.adminOnly && !authStore.isAdmin) {
+    return next('/')
+  }
+
+  next()
+})
+
+// ============================================================
 // 底部 Tab 路由守卫：Tab 之间切换不写入历史记录
 // 任何导航到 Tab 页面的 push 都会自动转为 replace，
 // 保证点击浏览器返回时直接退出网站，而不是逐页回退 Tab 历史
 // ============================================================
-
-/**
- * 判断目标路由是否为底部 Tab 页面
- */
 function isTabRoute(to) {
-  // 字符串路径（如 '/'  '/compare'）
   if (typeof to === 'string') {
     return routes.some(r => r.meta?.tab && r.path === to)
   }
-  // 对象路径（如 { path: '/' }  { name: 'home' }）
   if (to && typeof to === 'object') {
     if (to.path) return routes.some(r => r.meta?.tab && r.path === to.path)
     if (to.name) return routes.some(r => r.meta?.tab && r.name === to.name)

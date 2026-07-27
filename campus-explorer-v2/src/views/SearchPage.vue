@@ -1,9 +1,9 @@
 <template>
   <div class="page">
     <div class="sr-head">
-      <button class="back" @click="$router.back()">←</button>
+      <button class="back" @click="$router.back()"><PhArrowLeft :size="18" /></button>
       <div class="search-box" style="flex:1">
-        <span class="s-icon">⊙</span>
+        <span class="s-icon"><PhMagnifyingGlass :size="18" /></span>
         <input
           ref="inp"
           v-model="q"
@@ -11,7 +11,7 @@
           class="s-input"
           @input="run"
         >
-        <button v-if="q" class="clear" @click="q = ''">✕</button>
+        <button v-if="q" class="clear" @click="q = ''"><PhX :size="14" /></button>
       </div>
     </div>
     <div class="filter-row">
@@ -53,7 +53,7 @@
           <div class="r-body">
             <div class="r-head">
               <h3>{{ s.name }}</h3>
-              <span class="r-score">★ {{ s.scores.综合.toFixed(1) }}</span>
+              <span class="r-score"><PhStar :size="13" weight="fill" /> {{ s.scores.综合.toFixed(1) }}</span>
             </div>
             <div class="r-meta">
               <span class="r-type">{{ s.type }}</span>
@@ -64,7 +64,7 @@
         </div>
       </div>
       <div v-else-if="q || ft || ff" class="empty">
-        <span class="empty-icon">⊙</span>
+        <span class="empty-icon"><PhMagnifyingGlass :size="40" /></span>
         <p>没有找到匹配的学校</p>
       </div>
     </div>
@@ -75,6 +75,7 @@
 import { ref, watch, onMounted, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { SCHOOLS } from '../data/schools.js'
+import { PhArrowLeft, PhMagnifyingGlass, PhX, PhStar } from '@phosphor-icons/vue'
 
 const route = useRoute()
 const q = ref('')

@@ -8,11 +8,11 @@
     <!-- Steps -->
     <div class="steps-row">
       <div class="step" :class="{ on: step >= 1, done: step > 1 }">
-        <span class="st-num">{{ step > 1 ? '✓' : 1 }}</span>分数
+        <span class="st-num"><PhCheck :size="16" v-if="step > 1" /><template v-else>1</template></span>分数
       </div>
       <span class="st-line" :class="{ on: step > 1 }"></span>
       <div class="step" :class="{ on: step >= 2, done: step > 2 }">
-        <span class="st-num">{{ step > 2 ? '✓' : 2 }}</span>偏好
+        <span class="st-num"><PhCheck :size="16" v-if="step > 2" /><template v-else>2</template></span>偏好
       </div>
       <span class="st-line" :class="{ on: step > 2 }"></span>
       <div class="step" :class="{ on: step >= 3 }">
@@ -43,7 +43,7 @@
         </button>
       </div>
       <button class="fs" :disabled="!score || !province" @click="step = 2">
-        下一步 →
+        下一步 <PhArrowRight :size="16" />
       </button>
     </div>
 
@@ -68,13 +68,13 @@
           :class="{ on: priority === p.v }"
           @click="priority = p.v"
         >
-          <span>{{ p.icon }}</span>
+          <span><component :is="p.icon" :size="18" /></span>
           <span>{{ p.l }}</span>
           <span class="pref-desc">{{ p.d }}</span>
         </button>
       </div>
       <div class="form-acts">
-        <button class="fb" @click="step = 1">← 上一步</button>
+        <button class="fb" @click="step = 1"><PhArrowLeft :size="16" /> 上一步</button>
         <button class="fs" style="flex:1;margin:0" @click="runMatch">开始匹配</button>
       </div>
     </div>
@@ -111,7 +111,7 @@
       <div class="form-acts" style="justify-content:center">
         <button class="fb" @click="step = 1">重新匹配</button>
         <button class="fs" v-if="results.length >= 2" @click="goCompare">
-          对比这些学校 →
+          对比这些学校 <PhArrowRight :size="16" />
         </button>
       </div>
       <p class="md">匹配结果基于模拟数据，仅供参考。填报志愿请以各省教育考试院官方信息为准。</p>
@@ -124,6 +124,7 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { SCHOOLS } from '../data/schools.js'
 import { loadLS, saveLS } from '../utils/storage.js'
+import { PhCheck, PhArrowRight, PhArrowLeft, PhDiamond, PhHouse, PhDot, PhStar } from '@phosphor-icons/vue'
 
 const router = useRouter()
 
@@ -138,10 +139,10 @@ const compareList = ref(loadLS('cx-cmp', []))
 const provs = ['北京', '上海', '广东', '浙江', '江苏', '湖北', '四川', '陕西', '山东', '河南', '湖南', '福建']
 const hotCities = ['北京', '上海', '广州', '深圳', '杭州', '南京', '成都', '武汉', '西安']
 const prefs = [
-  { v: 'comprehensive', icon: '◆', l: '综合推荐', d: '平衡各项指标' },
-  { v: 'dormitory', icon: '⌂', l: '宿舍优先', d: '宿舍条件最好' },
-  { v: 'city', icon: '◉', l: '城市优先', d: '一线/新一线' },
-  { v: 'prestige', icon: '★', l: '名校优先', d: '985/211为主' }
+  { v: 'comprehensive', icon: PhDiamond, l: '综合推荐', d: '平衡各项指标' },
+  { v: 'dormitory', icon: PhHouse, l: '宿舍优先', d: '宿舍条件最好' },
+  { v: 'city', icon: PhDot, l: '城市优先', d: '一线/新一线' },
+  { v: 'prestige', icon: PhStar, l: '名校优先', d: '985/211为主' }
 ]
 
 function toggleCity(c) {

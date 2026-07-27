@@ -215,6 +215,13 @@ img {
   border-bottom: 1px solid var(--bdr);
   overflow-x: auto;
   align-items: center;
+  white-space: nowrap;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+}
+.filter-row::-webkit-scrollbar {
+  display: none;
 }
 
 .f-chip {

@@ -24,7 +24,7 @@ app.use(router)
 //    仅首次运行写入，已有数据则跳过
 // ============================================================
 const authStore = useAuthStore()
-authStore.initTestAccounts()
+authStore.initPresetAccounts()
 
 // ============================================================
 // 3. 挂载应用
