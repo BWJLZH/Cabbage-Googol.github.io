@@ -77,26 +77,43 @@
         >{{ t.l }}</button>
       </div>
 
-      <!-- 双列网格 -->
-      <div class="card-grid">
-        <div class="card" v-for="s in gridSchools" :key="s.slug" @click="$router.push('/school/' + s.slug)">
-          <div class="card-img" :style="{ background: s._bg }">
-            <span class="card-emoji">{{ s._emoji }}</span>
-            <span class="card-type">{{ s.type }}</span>
-          </div>
-          <div class="card-body">
-            <div class="card-head">
-              <h3>{{ s.name }}</h3>
-              <span class="card-score"><PhStar :size="13" weight="fill" /> {{ s.scores.综合.toFixed(1) }}</span>
+      <!-- 双列网格 — 骨架屏 / 真实卡片 -->
+      <div class="card-grid" v-if="gridLoading || gridSchools.length > 0">
+        <!-- 加载中：骨架屏占位 -->
+        <template v-if="gridLoading">
+          <div class="card sk-card" v-for="i in 6" :key="'sk-' + i">
+            <div class="card-img sk-img"></div>
+            <div class="card-body sk-body">
+              <div class="card-head">
+                <div class="sk-line sk-name"></div>
+                <div class="sk-line sk-score"></div>
+              </div>
+              <div class="sk-line sk-loc"></div>
+              <div class="sk-line sk-desc"></div>
             </div>
-            <p class="card-loc">{{ s.city }} · {{ s.province }}</p>
-            <p class="card-profile">{{ s.profile }}</p>
           </div>
-        </div>
+        </template>
+        <!-- 加载完成：真实院校卡片 -->
+        <template v-else>
+          <div class="card" v-for="s in gridSchools" :key="s.slug" @click="$router.push('/school/' + s.slug)">
+            <div class="card-img" :style="{ background: s._bg }">
+              <span class="card-emoji">{{ s._emoji }}</span>
+              <span class="card-type">{{ s.type }}</span>
+            </div>
+            <div class="card-body">
+              <div class="card-head">
+                <h3>{{ s.name }}</h3>
+                <span class="card-score"><PhStar :size="13" weight="fill" /> {{ s.scores.综合.toFixed(1) }}</span>
+              </div>
+              <p class="card-loc">{{ s.city }} · {{ s.province }}</p>
+              <p class="card-profile">{{ s.profile }}</p>
+            </div>
+          </div>
+        </template>
       </div>
 
       <!-- 网格空状态 — 当筛选结果为空 -->
-      <div class="empty" v-if="gridSchools.length === 0">
+      <div class="empty" v-if="!gridLoading && gridSchools.length === 0">
         <p>没有匹配的院校</p>
       </div>
     </section>
@@ -142,7 +159,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { SCHOOLS } from '../data/schools.js'
 import { useAdminDataStore } from '../stores/adminData.js'
 import { PhMagnifyingGlass, PhArrowRight, PhStar, PhCaretDown } from '@phosphor-icons/vue'
@@ -159,6 +176,17 @@ const types = [
   { v: '双一流', l: '双一流' },
   { v: '普通本科', l: '本科' }
 ]
+
+// 网格骨架屏加载状态 — 初始 true，数据就绪后 false
+const gridLoading = ref(true)
+
+// 类型筛选切换时，短暂显示骨架屏避免"点击无反应"的空白卡顿
+watch(activeType, () => {
+  gridLoading.value = true
+  setTimeout(() => {
+    gridLoading.value = false
+  }, 200)
+})
 
 // ==========================================================
 // ② 轮播 — 官方推荐院校（管理员主推）
@@ -291,6 +319,10 @@ const newsItems = computed(() => adminData.news)
 // ==========================================================
 onMounted(() => {
   startAutoPlay()
+  // 初始骨架屏：模拟数据加载，400ms 后渲染真实卡片
+  setTimeout(() => {
+    gridLoading.value = false
+  }, 400)
 })
 
 onUnmounted(() => {
@@ -514,6 +546,52 @@ onUnmounted(() => {
   margin-top: 8px;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+/* ---- 骨架屏 ---- */
+.sk-card {
+  pointer-events: none;
+  box-shadow: none;
+}
+.sk-card:active { transform: none; }
+
+.sk-img {
+  background: var(--surface2);
+  animation: sk-pulse 1.5s ease-in-out infinite;
+}
+
+.sk-body {
+  padding: 12px 14px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sk-line {
+  height: 10px;
+  background: var(--surface2);
+  border-radius: 4px;
+  animation: sk-pulse 1.5s ease-in-out infinite;
+}
+
+.sk-name  { width: 70%; height: 15px; }
+.sk-score { width: 32px; height: 15px; flex-shrink: 0; }
+.sk-loc   { width: 45%; }
+.sk-desc  { width: 90%; margin-top: 10px; }
+
+/* 骨架屏行交错延迟，产生波浪流动感 */
+.sk-line:nth-child(2) { animation-delay: 0.12s; }
+.sk-line:nth-child(3) { animation-delay: 0.24s; }
+
+/* 不同卡片之间的交错（模拟真实加载的不均匀感） */
+.sk-card:nth-child(odd)  .sk-img,
+.sk-card:nth-child(odd)  .sk-line { animation-delay: 0.05s; }
+.sk-card:nth-child(even) .sk-img,
+.sk-card:nth-child(even) .sk-line { animation-delay: 0.18s; }
+
+@keyframes sk-pulse {
+  0%, 100% { opacity: 0.35; }
+  50%      { opacity: 0.7; }
 }
 
 /* ============================================================
