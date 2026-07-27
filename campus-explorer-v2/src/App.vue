@@ -59,7 +59,7 @@ const authStore = useAuthStore()
 const compareList = ref(loadLS('cx-cmp', []))
 
 const showNav = computed(() => {
-  return !route.path.startsWith('/school/') && route.path !== '/auth'
+  return !route.path.startsWith('/school/') && route.path !== '/auth' && route.path !== '/search'
 })
 
 const showAiBall = computed(() => {
