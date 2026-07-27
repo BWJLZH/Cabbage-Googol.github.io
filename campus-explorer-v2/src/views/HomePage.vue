@@ -1,7 +1,7 @@
 <template>
   <div class="page">
     <!-- ============================================================
-         顶部搜索框
+         ① 搜索栏 — 页面最顶部，sticky
          ============================================================ -->
     <div class="top-bar">
       <div class="search-box" @click="$router.push('/search')">
@@ -12,38 +12,61 @@
     </div>
 
     <!-- ============================================================
-         热门学校轮播
+         ② 官方推荐院校 — 横向轮播 Banner，自动播放
+            管理员主推院校，一次展示1张卡片
          ============================================================ -->
-    <section class="carousel-sec">
-      <div class="sec-head">
-        <h2>热门推荐</h2>
+    <section class="carousel-sec" v-if="featuredSchools.length > 0">
+      <div class="sec-head sec-head--carousel">
+        <h2>官方推荐院校</h2>
+        <div class="carousel-dots" v-if="featuredSchools.length > 1">
+          <button
+            v-for="(s, i) in featuredSchools"
+            :key="s.slug"
+            class="carousel-dot"
+            :class="{ on: i === currentSlide }"
+            @click="goToSlide(i)"
+            :aria-label="'第' + (i + 1) + '张'"
+          ></button>
+        </div>
       </div>
-      <div class="carousel">
+
+      <div
+        class="carousel-scroll"
+        ref="carouselRef"
+        @touchstart="pauseAuto"
+        @touchend="resumeAuto"
+        @scroll="onCarouselScroll"
+      >
         <div
           class="carousel-card"
-          v-for="s in featuredSchools"
+          v-for="(s, i) in featuredSchools"
           :key="s.slug"
           @click="$router.push('/school/' + s.slug)"
           :style="{ background: s._bg }"
         >
-          <span class="cc-type">{{ s.type }}</span>
+          <span class="cc-badge">{{ s.type }}</span>
           <span class="cc-emoji">{{ s._emoji }}</span>
           <div class="cc-info">
             <h3>{{ s.name }}</h3>
-            <p>{{ s.city }} · <PhStar :size="11" weight="fill" /> {{ s.scores.综合.toFixed(1) }}</p>
+            <p class="cc-loc">{{ s.city }} · {{ s.province }}</p>
+            <p class="cc-score"><PhStar :size="13" weight="fill" /> {{ s.scores.综合.toFixed(1) }}</p>
           </div>
+          <p class="cc-desc">{{ s.profile }}</p>
         </div>
       </div>
     </section>
 
     <!-- ============================================================
-         热门学校
+         ③ 高频查询院校 — 网格卡片区域
+            按综合评分排序，排除轮播已推荐院校
          ============================================================ -->
-    <section class="sec">
+    <section class="sec grid-sec">
       <div class="sec-head">
-        <h2>热门学校</h2>
+        <h2>高频查询院校</h2>
         <span class="sec-more" @click="$router.push('/search')">全部 <PhArrowRight :size="14" /></span>
       </div>
+
+      <!-- 类型筛选 -->
       <div class="type-strip">
         <button
           v-for="t in types"
@@ -53,8 +76,10 @@
           @click="activeType = activeType === t.v ? '' : t.v"
         >{{ t.l }}</button>
       </div>
+
+      <!-- 双列网格 -->
       <div class="card-grid">
-        <div class="card" v-for="s in displaySchools" :key="s.slug" @click="$router.push('/school/' + s.slug)">
+        <div class="card" v-for="s in gridSchools" :key="s.slug" @click="$router.push('/school/' + s.slug)">
           <div class="card-img" :style="{ background: s._bg }">
             <span class="card-emoji">{{ s._emoji }}</span>
             <span class="card-type">{{ s.type }}</span>
@@ -69,52 +94,64 @@
           </div>
         </div>
       </div>
+
+      <!-- 网格空状态 — 当筛选结果为空 -->
+      <div class="empty" v-if="gridSchools.length === 0">
+        <p>没有匹配的院校</p>
+      </div>
     </section>
 
     <!-- ============================================================
-         高考热点资讯
+         ④ 高考热点 · 招生政策 — 纵向文字滚动播报栏
+            仅手动滚动，管理员后台编辑
          ============================================================ -->
-    <section class="sec news-sec">
+    <section class="sec news-ticker-sec">
       <div class="sec-head">
-        <h2>高考热点</h2>
-        <span class="sec-more">更多 <PhArrowRight :size="14" /></span>
+        <h2>高考热点 · 招生政策</h2>
       </div>
-      <div class="news-list">
-        <div class="news-card" v-for="n in newsItems" :key="n.id">
-          <div class="news-body">
-            <h3 class="news-title">{{ n.title }}</h3>
-            <p class="news-desc">{{ n.desc }}</p>
-            <div class="news-meta">
-              <span class="news-source">{{ n.source }}</span>
-              <span class="news-date">{{ n.date }}</span>
+
+      <div class="news-ticker" v-if="newsItems.length > 0">
+        <div
+          class="news-item"
+          :class="{ expanded: expandedNews === n.id }"
+          v-for="n in newsItems"
+          :key="n.id"
+          @click="toggleNews(n.id)"
+        >
+          <span class="news-dot"></span>
+          <div class="news-content">
+            <div class="news-head-row">
+              <span class="news-title">{{ n.title }}</span>
+              <span class="news-chevron" :class="{ on: expandedNews === n.id }">
+                <PhCaretDown :size="14" />
+              </span>
             </div>
+            <span class="news-meta">{{ n.source }} · {{ n.date }}</span>
+            <transition name="news-expand">
+              <p class="news-desc" v-if="expandedNews === n.id">{{ n.desc }}</p>
+            </transition>
           </div>
         </div>
       </div>
-    </section>
 
-    <!-- ============================================================
-         CTA
-         ============================================================ -->
-    <section class="sec cta-sec">
-      <div class="cta-card" @click="$router.push('/match')">
-        <span class="cta-icon"><PhSparkle :size="32" /></span>
-        <h2>AI 志愿匹配</h2>
-        <p>输入分数，AI帮你找冲、稳、保三档大学</p>
-        <span class="cta-btn">开始匹配 <PhArrowRight :size="16" /></span>
+      <div class="empty" v-else>
+        <p>暂无资讯</p>
       </div>
     </section>
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { SCHOOLS } from '../data/schools.js'
 import { useAdminDataStore } from '../stores/adminData.js'
-import { PhMagnifyingGlass, PhArrowRight, PhStar, PhSparkle } from '@phosphor-icons/vue'
+import { PhMagnifyingGlass, PhArrowRight, PhStar, PhCaretDown } from '@phosphor-icons/vue'
 
 const adminData = useAdminDataStore()
 
+// ==========================================================
+// 类型筛选
+// ==========================================================
 const activeType = ref('')
 const types = [
   { v: '985', l: '985' },
@@ -123,23 +160,150 @@ const types = [
   { v: '普通本科', l: '本科' }
 ]
 
-const displaySchools = computed(() => {
-  let list = SCHOOLS
-  if (activeType.value) list = list.filter(s => s.type === activeType.value)
-  return list.slice(0, 12)
-})
-
-// 轮播：使用管理员配置的顺序
+// ==========================================================
+// ② 轮播 — 官方推荐院校（管理员主推）
+// ==========================================================
 const featuredSchools = computed(() =>
   adminData.carousel.map(slug => SCHOOLS.find(s => s.slug === slug)).filter(Boolean)
 )
 
-// 高考热点资讯：使用管理员编辑的数据
+const carouselRef = ref(null)
+const currentSlide = ref(0)
+let autoTimer = null
+let resumeTimeout = null
+const AUTO_INTERVAL = 3500
+
+function scrollToSlide(index) {
+  const container = carouselRef.value
+  if (!container) return
+  const cards = container.querySelectorAll('.carousel-card')
+  if (!cards[index]) return
+
+  // offsetLeft 是卡片相对于容器 border-edge 的位置（容器为 position:relative）
+  // 第一张卡片的 offsetLeft = 容器 padding-left（即基准偏移量）
+  // 目标滚动位置 = 卡片偏移 - 基准偏移 → 卡片吸附到与第一张相同的位置
+  const baseOffset = cards[0].offsetLeft
+  const targetLeft = cards[index].offsetLeft - baseOffset
+
+  container.scrollTo({ left: targetLeft, behavior: 'smooth' })
+  currentSlide.value = index
+}
+
+function goToSlide(index) {
+  pauseAuto()
+  scrollToSlide(index)
+  resumeAuto()
+}
+
+function nextSlide() {
+  if (featuredSchools.value.length <= 1) return
+  const next = (currentSlide.value + 1) % featuredSchools.value.length
+  scrollToSlide(next)
+}
+
+function startAutoPlay() {
+  if (featuredSchools.value.length <= 1) return
+  stopAutoPlay()
+  autoTimer = setInterval(nextSlide, AUTO_INTERVAL)
+}
+
+function stopAutoPlay() {
+  if (autoTimer) {
+    clearInterval(autoTimer)
+    autoTimer = null
+  }
+}
+
+function pauseAuto() {
+  stopAutoPlay()
+  if (resumeTimeout) clearTimeout(resumeTimeout)
+}
+
+function resumeAuto() {
+  if (resumeTimeout) clearTimeout(resumeTimeout)
+  resumeTimeout = setTimeout(() => {
+    // 根据当前滚动位置推断当前卡片
+    updateCurrentFromScroll()
+    startAutoPlay()
+  }, 2000)
+}
+
+function onCarouselScroll() {
+  // 滚动中实时更新指示点（debounced via passive listener）
+  updateCurrentFromScroll()
+}
+
+let scrollTick = null
+function updateCurrentFromScroll() {
+  if (!carouselRef.value || featuredSchools.value.length === 0) return
+  if (scrollTick) return
+  scrollTick = requestAnimationFrame(() => {
+    scrollTick = null
+    const container = carouselRef.value
+    const cards = container.querySelectorAll('.carousel-card')
+    if (cards.length === 0) return
+    const scrollLeft = container.scrollLeft
+    // offsetLeft 从容器 border-edge 起算，基准偏移 = 第一张卡的 offsetLeft (= padding-left)
+    const baseOffset = cards[0].offsetLeft
+    let bestIdx = 0
+    let bestDist = Infinity
+    cards.forEach((card, i) => {
+      // 卡片在视口中的位置 = offsetLeft - scrollLeft
+      // 与吸附点（baseOffset）的距离越小，越接近当前卡片
+      const dist = Math.abs(card.offsetLeft - scrollLeft - baseOffset)
+      if (dist < bestDist) {
+        bestDist = dist
+        bestIdx = i
+      }
+    })
+    if (bestIdx !== currentSlide.value) {
+      currentSlide.value = bestIdx
+    }
+  })
+}
+
+// ==========================================================
+// ③ 网格 — 高频查询院校（排除轮播项，按评分排序）
+// ==========================================================
+const gridSchools = computed(() => {
+  const carouselSlugs = new Set(adminData.carousel)
+  let list = SCHOOLS.filter(s => !carouselSlugs.has(s.slug))
+  if (activeType.value) {
+    list = list.filter(s => s.type === activeType.value)
+  }
+  // 按综合评分降序
+  return [...list].sort((a, b) => b.scores.综合 - a.scores.综合).slice(0, 12)
+})
+
+// ==========================================================
+// ④ 播报栏 — 高考热点资讯（点击展开/收起）
+// ==========================================================
+const expandedNews = ref(null)
+
+function toggleNews(id) {
+  expandedNews.value = expandedNews.value === id ? null : id
+}
+
 const newsItems = computed(() => adminData.news)
+
+// ==========================================================
+// 生命周期
+// ==========================================================
+onMounted(() => {
+  startAutoPlay()
+})
+
+onUnmounted(() => {
+  stopAutoPlay()
+  if (resumeTimeout) clearTimeout(resumeTimeout)
+  if (scrollTick) cancelAnimationFrame(scrollTick)
+})
 </script>
 
 <style scoped>
-/* ====== 顶部搜索 ====== */
+/* ============================================================
+   ① 搜索栏
+   ============================================================ */
 .top-bar {
   position: sticky;
   top: 0;
@@ -166,64 +330,124 @@ const newsItems = computed(() => adminData.news)
   border-radius: 8px; flex-shrink: 0;
 }
 
-/* ====== 轮播 ====== */
-.carousel-sec { padding: 8px 0 8px; }
-.carousel-sec .sec-head { padding: 0 16px; margin-bottom: 12px; }
+/* ============================================================
+   ② 官方推荐院校轮播
+   ============================================================ */
+.carousel-sec {
+  padding: 4px 0 0;
+}
+.sec-head--carousel {
+  padding: 0 16px;
+  margin-bottom: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.sec-head--carousel h2 {
+  font-family: var(--font-heading);
+  font-size: 20px;
+  font-weight: 700;
+}
 
-.carousel {
+/* 轮播指示点 */
+.carousel-dots { display: flex; gap: 6px; align-items: center; }
+.carousel-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--bdr);
+  border: none; padding: 0;
+  cursor: pointer;
+  transition: all .2s var(--ease);
+}
+.carousel-dot.on {
+  width: 18px;
+  border-radius: 3px;
+  background: var(--accent2);
+}
+
+/* 滚动容器 */
+.carousel-scroll {
   display: flex;
   gap: 12px;
   padding: 0 16px;
   overflow-x: auto;
   scroll-snap-type: x mandatory;
+  scroll-padding-left: 16px;
   -webkit-overflow-scrolling: touch;
   scroll-behavior: smooth;
   scrollbar-width: none;
+  position: relative;
 }
-.carousel::-webkit-scrollbar { display: none; }
+.carousel-scroll::-webkit-scrollbar { display: none; }
 
+/* 轮播卡片 — 一次展示1张，左侧与搜索栏/网格统一对齐 */
 .carousel-card {
-  min-width: 200px;
-  height: 120px;
+  flex: 0 0 100%;
+  min-height: 160px;
   border-radius: var(--radius-lg);
+  padding: 16px 18px;
+  cursor: pointer;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  position: relative;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding: 14px 16px;
-  cursor: pointer;
-  scroll-snap-align: start;
-  flex-shrink: 0;
-  position: relative;
-  overflow: hidden;
-  transition: all .2s;
+  transition: transform .2s;
 }
-.carousel-card:active { transform: scale(.97); }
+.carousel-card:active { transform: scale(.98); }
 
-.cc-type {
+.cc-badge {
   align-self: flex-start;
-  padding: 2px 8px;
+  padding: 3px 10px;
   background: rgba(255,255,255,.85);
   color: var(--text);
-  font-size: 10px; font-weight: 600;
+  font-size: 11px; font-weight: 600;
   border-radius: 4px;
+  position: relative; z-index: 1;
 }
 .cc-emoji {
   position: absolute;
-  right: 10px; bottom: 6px;
-  font-size: 48px; opacity: .3;
+  right: 12px; top: 8px;
+  font-size: 56px; opacity: .22;
+  line-height: 1;
 }
-.cc-info { position: relative; z-index: 1; }
+.cc-info {
+  position: relative; z-index: 1;
+}
 .cc-info h3 {
   font-family: var(--font-heading);
-  font-size: 16px; font-weight: 700;
-  color: var(--text); margin-bottom: 2px;
+  font-size: 20px; font-weight: 700;
+  color: var(--text);
+  margin-bottom: 2px;
 }
-.cc-info p {
+.cc-loc {
   font-size: 12px; color: var(--text2);
-  display: flex; align-items: center; gap: 2px;
+  margin-bottom: 2px;
+}
+.cc-score {
+  font-size: 13px; font-weight: 600;
+  color: var(--accent2);
+  display: flex; align-items: center; gap: 3px;
+}
+.cc-desc {
+  position: relative; z-index: 1;
+  font-size: 12px; color: var(--text2);
+  line-height: 1.5;
+  margin-top: 6px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
-/* ====== TYPE STRIP ====== */
+/* ============================================================
+   ③ 高频查询院校网格
+   ============================================================ */
+.grid-sec { padding: 24px 16px; }
+
+/* 类型筛选条 */
 .type-strip {
   display: flex; gap: 8px;
   padding: 0 0 14px;
@@ -242,61 +466,191 @@ const newsItems = computed(() => adminData.news)
 }
 .type-chip.on { background: var(--text); color: var(--bg); border-color: var(--text); }
 
-/* ====== SECTION / CARDS ====== */
-.sec-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 16px; }
-.sec-head h2 { font-family: var(--font-heading); font-size: 20px; font-weight: 700; }
-.sec-more { font-size: 13px; color: var(--accent2); cursor: pointer; display: flex; align-items: center; gap: 2px; }
-
-.card-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
-@media (min-width: 500px) { .card-grid { grid-template-columns: repeat(3, 1fr); } }
+/* 卡片网格 */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+@media (min-width: 500px) {
+  .card-grid { grid-template-columns: repeat(3, 1fr); }
+}
 .card {
   background: #fff; border-radius: var(--radius-lg);
   border: 1px solid var(--bdr); overflow: hidden;
   cursor: pointer; box-shadow: var(--shadow); transition: all .2s;
 }
 .card:active { transform: scale(.98); }
-.card-img { aspect-ratio: 4/3; display: flex; align-items: center; justify-content: center; position: relative; }
+.card-img {
+  aspect-ratio: 4/3;
+  display: flex; align-items: center; justify-content: center;
+  position: relative;
+}
 .card-emoji { font-size: 40px; opacity: .6; }
-.card-type { position: absolute; top: 8px; left: 8px; padding: 2px 8px; background: rgba(26,26,46,.75); color: #fff; font-size: 10px; font-weight: 600; border-radius: 4px; }
+.card-type {
+  position: absolute; top: 8px; left: 8px;
+  padding: 2px 8px;
+  background: rgba(26,26,46,.75); color: #fff;
+  font-size: 10px; font-weight: 600; border-radius: 4px;
+}
 .card-body { padding: 10px 14px 14px; }
-.card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
-.card-head h3 { font-family: var(--font-heading); font-size: 15px; font-weight: 600; line-height: 1.3; flex: 1; min-width: 0; }
-.card-score { display: flex; align-items: center; gap: 2px; font-size: 13px; font-weight: 600; color: var(--accent2); flex-shrink: 0; }
+.card-head {
+  display: flex; justify-content: space-between;
+  align-items: flex-start; gap: 8px;
+}
+.card-head h3 {
+  font-family: var(--font-heading);
+  font-size: 15px; font-weight: 600; line-height: 1.3;
+  flex: 1; min-width: 0;
+}
+.card-score {
+  display: flex; align-items: center; gap: 2px;
+  font-size: 13px; font-weight: 600;
+  color: var(--accent2); flex-shrink: 0;
+}
 .card-loc { font-size: 12px; color: var(--text2); }
-.card-profile { font-size: 12px; color: var(--text2); line-height: 1.5; margin-top: 8px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.card-profile {
+  font-size: 12px; color: var(--text2); line-height: 1.5;
+  margin-top: 8px;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden;
+}
 
-/* ====== 高考资讯 ====== */
-.news-list { display: flex; flex-direction: column; gap: 10px; }
-.news-card {
+/* ============================================================
+   ④ 高考热点播报栏
+   ============================================================ */
+.news-ticker-sec {
+  padding: 8px 16px 32px;
+}
+
+.news-ticker {
+  max-height: 360px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
   background: #fff;
   border: 1px solid var(--bdr);
   border-radius: var(--radius-lg);
-  padding: 16px;
   box-shadow: var(--shadow);
 }
+
+.news-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--bdr);
+  cursor: pointer;
+  transition: background .12s;
+}
+.news-item:last-child { border-bottom: none; }
+.news-item:active,
+.news-item.expanded { background: var(--surface2); }
+
+.news-dot {
+  flex-shrink: 0;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--accent2);
+  margin-top: 9px;
+  transition: background .2s;
+}
+.news-item.expanded .news-dot {
+  background: var(--text);
+}
+
+.news-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.news-head-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+
 .news-title {
   font-family: var(--font-heading);
-  font-size: 15px; font-weight: 600;
-  color: var(--text); line-height: 1.4; margin-bottom: 6px;
+  font-size: 14px; font-weight: 600;
+  color: var(--text);
+  line-height: 1.5;
+  flex: 1;
 }
-.news-desc {
-  font-size: 13px; color: var(--text2); line-height: 1.6;
-  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
-}
-.news-meta { display: flex; gap: 12px; margin-top: 10px; }
-.news-source { font-size: 11px; color: var(--accent2); background: rgba(184,115,81,.08); padding: 2px 8px; border-radius: 4px; }
-.news-date { font-size: 11px; color: var(--text3); }
 
-/* ====== CTA ====== */
-.cta-sec { padding: 32px 16px; }
-.cta-card {
-  background: var(--text); border-radius: 24px;
-  padding: 32px 24px; text-align: center;
-  cursor: pointer; transition: all .2s;
+.news-chevron {
+  flex-shrink: 0;
+  color: var(--text3);
+  display: flex;
+  align-items: center;
+  margin-top: 2px;
+  transition: transform .25s var(--ease);
 }
-.cta-card:active { transform: scale(.98); }
-.cta-icon { display: block; margin-bottom: 16px; color: var(--accent2); }
-.cta-card h2 { font-family: var(--font-heading); font-size: 24px; font-weight: 700; color: var(--bg); margin-bottom: 8px; }
-.cta-card p { font-size: 14px; color: rgba(254,250,246,.6); margin-bottom: 20px; }
-.cta-btn { display: inline-flex; align-items: center; gap: 4px; padding: 12px 28px; background: var(--bg); color: var(--text); font-weight: 600; font-size: 15px; border-radius: var(--radius-full); }
+.news-chevron.on { transform: rotate(180deg); color: var(--accent2); }
+
+.news-meta {
+  display: block;
+  font-size: 11px;
+  color: var(--text3);
+  margin-top: 4px;
+}
+
+.news-desc {
+  font-size: 13px;
+  color: var(--text2);
+  line-height: 1.7;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--bdr);
+}
+
+/* 展开/收起过渡 */
+.news-expand-enter-active {
+  transition: all .25s var(--ease);
+  overflow: hidden;
+}
+.news-expand-leave-active {
+  transition: all .2s var(--ease);
+  overflow: hidden;
+}
+.news-expand-enter-from,
+.news-expand-leave-to {
+  opacity: 0;
+  max-height: 0;
+  margin-top: 0;
+  padding-top: 0;
+  border-top-color: transparent;
+}
+.news-expand-enter-to,
+.news-expand-leave-from {
+  opacity: 1;
+  max-height: 120px;
+}
+
+/* ============================================================
+   共享 Section 样式
+   ============================================================ */
+.sec-head {
+  display: flex; justify-content: space-between;
+  align-items: baseline; margin-bottom: 16px;
+}
+.sec-head h2 {
+  font-family: var(--font-heading);
+  font-size: 20px; font-weight: 700;
+}
+.sec-more {
+  font-size: 13px; color: var(--accent2);
+  cursor: pointer;
+  display: flex; align-items: center; gap: 2px;
+}
+
+/* 空状态 */
+.empty {
+  text-align: center;
+  padding: 32px 16px;
+}
+.empty p {
+  font-size: 14px; color: var(--text3);
+}
 </style>
