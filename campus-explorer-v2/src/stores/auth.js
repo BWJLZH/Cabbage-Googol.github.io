@@ -28,7 +28,8 @@ async function hashPassword(password) {
 // ============================================================
 // 预置密码哈希
 // ============================================================
-const PRESET_HASH_123456 = '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92'   // SHA-256("123456")
+const PRESET_HASH_STUDENT123 = '703b0a3d6ad75b649a28adde7d83c6251da457549263bc7ff45ec709b0a8448b'  // SHA-256("student123")
+const PRESET_HASH_PARENTS123 = '94dedb02d58bfd19fd6984cfe70f7b07afeb469bc60fd3e0eabae6b8a9e8887b'  // SHA-256("parents123")
 const PRESET_HASH_ADMIN123 = '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9' // SHA-256("admin123")
 
 // ============================================================
@@ -36,19 +37,19 @@ const PRESET_HASH_ADMIN123 = '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa8
 // ============================================================
 const PRESET_USERS = [
   {
-    username: '张三',
-    email: 'zhangsan@test.com',
-    passwordHash: PRESET_HASH_123456,
-    nickname: '张三',
+    username: 'student',
+    email: 'student@campus.cn',
+    passwordHash: PRESET_HASH_STUDENT123,
+    nickname: '学生用户',
     avatar: '',
     role: 'student',
     createdAt: '2026-01-01'
   },
   {
-    username: '李四',
-    email: 'lisi@test.com',
-    passwordHash: PRESET_HASH_123456,
-    nickname: '李四',
+    username: 'parents',
+    email: 'parents@campus.cn',
+    passwordHash: PRESET_HASH_PARENTS123,
+    nickname: '家长用户',
     avatar: '',
     role: 'parent',
     createdAt: '2026-01-01'
@@ -118,7 +119,7 @@ export const useAuthStore = defineStore('auth', () => {
 
     if (changed) {
       saveUsers(users)
-      console.log('[AuthStore] 预置账号: 张三/123456(学生), 李四/123456(家长), admin/admin123(管理员)')
+      console.log('[AuthStore] 预置账号: student/student123(学生), parents/parents123(家长), admin/admin123(管理员)')
     }
 
     // 初始化配置
