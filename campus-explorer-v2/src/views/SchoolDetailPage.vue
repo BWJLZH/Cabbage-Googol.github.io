@@ -113,15 +113,26 @@
               <span class="rv-src">{{ r.source }}</span>
             </div>
           </div>
-          <span class="rv-star"><PhStar :size="14" weight="fill" /> {{ r.rating.综合 }}</span>
+          <div class="rv-head-right">
+            <span class="rv-star"><PhStar :size="14" weight="fill" /> {{ r.rating.综合 }}</span>
+            <!-- 自己的评论：显示编辑/删除按钮 -->
+            <div class="rv-own-acts" v-if="r._isUser && r.username === authStore.currentUser?.username">
+              <button class="rv-edit" @click.stop="openEditReview(r)" title="编辑">
+                <PhPencil :size="14" />
+              </button>
+              <button class="rv-del" @click.stop="deleteReview(r.id)" title="删除">
+                <PhTrash :size="14" />
+              </button>
+            </div>
+          </div>
         </div>
         <p class="rv-content">{{ r.content }}</p>
         <div class="rv-foot">
-          <span>{{ r.created_at }}</span>
+          <span>{{ r.created_at }}{{ r.editedAt ? ' · 已编辑' : '' }}</span>
           <button @click.stop="r.helpful++"><PhCaretUp :size="14" /> 有用({{ r.helpful }})</button>
         </div>
       </div>
-      <button class="write-btn" @click="showReview = true"><PhNotePencil :size="16" /> 写评价</button>
+      <button class="write-btn" @click="openNewReview"><PhNotePencil :size="16" /> 写评价</button>
     </div>
 
     <!-- AI Q&A -->
@@ -167,15 +178,15 @@
       <button @click="shareIt">
         <span><PhShare :size="18" /></span>分享
       </button>
-      <button class="primary" @click="showReview = true">
+      <button class="primary" @click="openNewReview">
         <span><PhNotePencil :size="18" /></span>写评价
       </button>
     </div>
 
     <!-- Review Modal -->
-    <div class="modal-mask" v-if="showReview" @click.self="showReview = false">
+    <div class="modal-mask" v-if="showReview" @click.self="closeReviewModal">
       <div class="modal">
-        <h3>写评价</h3>
+        <h3>{{ editingReviewId ? '编辑评价' : '写评价' }}</h3>
         <div class="stars-row">
           <span>综合评分</span>
           <span class="stars">
@@ -203,26 +214,45 @@
             <input type="checkbox" v-model="anon"> 匿名
           </label>
           <div>
-            <button @click="showReview = false">取消</button>
-            <button class="sbm" @click="submitReview" :disabled="reviewText.trim().length < 10">
-              发布
+            <button @click="closeReviewModal">取消</button>
+            <button class="sbm" @click="submitReview" :disabled="reviewText.trim().length < 5">
+              {{ editingReviewId ? '保存修改' : '发布' }}
             </button>
           </div>
         </div>
       </div>
     </div>
+
+    <!-- 删除确认弹窗 -->
+    <div class="modal-mask" v-if="showDeleteConfirm" @click.self="cancelDelete">
+      <div class="modal confirm-modal">
+        <h3>确定删除评论？</h3>
+        <p class="confirm-desc">删除后将无法恢复</p>
+        <div class="confirm-acts">
+          <button class="confirm-cancel" @click="cancelDelete">取消</button>
+          <button class="confirm-danger" @click="confirmDelete">确定删除</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast 提示 -->
+    <transition name="toast">
+      <div class="review-toast" v-if="toastMessage">{{ toastMessage }}</div>
+    </transition>
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { SCHOOLS } from '../data/schools.js'
 import { loadLS, saveLS } from '../utils/storage.js'
-import { PhArrowLeft, PhStar, PhShare, PhSparkle, PhCheck, PhX, PhWarning, PhNotePencil, PhGraduationCap, PhPaperPlaneRight, PhArrowsLeftRight, PhCaretUp } from '@phosphor-icons/vue'
+import { PhArrowLeft, PhStar, PhShare, PhSparkle, PhCheck, PhX, PhWarning, PhNotePencil, PhGraduationCap, PhPaperPlaneRight, PhArrowsLeftRight, PhCaretUp, PhPencil, PhTrash } from '@phosphor-icons/vue'
+import { useAuthStore } from '../stores/auth.js'
 
 const route = useRoute()
 const router = useRouter()
+const authStore = useAuthStore()
 
 const favorites = ref(loadLS('cx-fav', []))
 const compareList = ref(loadLS('cx-cmp', []))
@@ -236,9 +266,14 @@ const msgs = ref([])
 const aq = ref('')
 const rs = ref('helpful')
 const showReview = ref(false)
+const editingReviewId = ref(null)   // null=新建模式, 非null=编辑模式
 const rating = ref(4)
 const reviewText = ref('')
 const anon = ref(true)
+const toastMessage = ref('')
+const showDeleteConfirm = ref(false)
+const pendingDeleteId = ref(null)
+let toastTimer = null
 
 const quickQs = ['宿舍有空调吗', '食堂怎么样', '学校交通方便吗', '就业情况如何']
 
@@ -268,9 +303,13 @@ const dormDetail = computed(() => {
 
 const sortedReviews = computed(() => {
   if (!s.value) return []
-  const r = [...s.value.reviews]
-  if (rs.value === 'helpful') r.sort((a, b) => b.helpful - a.helpful)
-  else r.sort((a, b) => b.created_at.localeCompare(a.created_at))
+  // 合并内置评论 + 当前学校的用户评论
+  const userRevs = userReviews.value
+    .filter(r => r.school_slug === s.value.slug)
+    .map(r => ({ ...r, _isUser: true }))
+  const r = [...userRevs, ...s.value.reviews]
+  if (rs.value === 'helpful') r.sort((a, b) => (b.helpful || 0) - (a.helpful || 0))
+  else r.sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''))
   return r
 })
 
@@ -328,24 +367,119 @@ function shareIt() {
 }
 
 function submitReview() {
-  if (!reviewText.value.trim() || !s.value) return
-  const review = {
-    id: 'ur_' + Date.now(),
-    school_slug: s.value.slug,
-    school_name: s.value.name,
-    source: '用户原创',
-    content: reviewText.value.trim(),
-    rating: { 综合: rating.value },
-    author: anon.value ? '匿名用户' : '同学',
-    helpful: 0,
-    created_at: new Date().toISOString().split('T')[0]
+  const text = reviewText.value.trim()
+  if (!text || !s.value) return
+
+  if (editingReviewId.value) {
+    // ---------- 编辑模式：更新已有评论 ----------
+    const idx = userReviews.value.findIndex(r => r.id === editingReviewId.value)
+    if (idx !== -1) {
+      userReviews.value[idx] = {
+        ...userReviews.value[idx],
+        content: text,
+        rating: { 综合: rating.value },
+        author: anon.value ? '匿名用户' : '同学',
+        editedAt: new Date().toISOString().split('T')[0]
+      }
+      saveLS('cx-rev', userReviews.value)
+      showToast('✅ 评论已更新')
+    }
+    editingReviewId.value = null
+  } else {
+    // ---------- 新建模式 ----------
+    const review = {
+      id: 'ur_' + Date.now(),
+      school_slug: s.value.slug,
+      school_name: s.value.name,
+      username: authStore.currentUser?.username || '',
+      source: '用户原创',
+      content: text,
+      rating: { 综合: rating.value },
+      author: anon.value ? '匿名用户' : '同学',
+      helpful: 0,
+      created_at: new Date().toISOString().split('T')[0]
+    }
+    userReviews.value.unshift(review)
+    saveLS('cx-rev', userReviews.value)
+    showToast('✅ 评论发布成功')
   }
-  userReviews.value.unshift(review)
-  saveLS('cx-rev', userReviews.value)
+
   showReview.value = false
   reviewText.value = ''
   rating.value = 4
 }
+
+// ---------- 打开新建弹窗（始终重置为空白） ----------
+function openNewReview() {
+  editingReviewId.value = null
+  reviewText.value = ''
+  rating.value = 4
+  anon.value = true
+  showReview.value = true
+}
+
+// ---------- 打开编辑弹窗 ----------
+function openEditReview(review) {
+  editingReviewId.value = review.id
+  reviewText.value = review.content
+  rating.value = review.rating?.综合 || 4
+  anon.value = review.author === '匿名用户'
+  showReview.value = true
+}
+
+// ---------- 删除自己的评论 ----------
+function deleteReview(id) {
+  pendingDeleteId.value = id
+  showDeleteConfirm.value = true
+}
+
+function confirmDelete() {
+  if (pendingDeleteId.value) {
+    userReviews.value = userReviews.value.filter(r => r.id !== pendingDeleteId.value)
+    saveLS('cx-rev', userReviews.value)
+    showToast('🗑 评论已删除')
+  }
+  showDeleteConfirm.value = false
+  pendingDeleteId.value = null
+}
+
+function cancelDelete() {
+  showDeleteConfirm.value = false
+  pendingDeleteId.value = null
+}
+
+// ---------- 关闭弹窗（重置编辑状态） ----------
+function closeReviewModal() {
+  showReview.value = false
+  editingReviewId.value = null
+  reviewText.value = ''
+  rating.value = 4
+  anon.value = true
+}
+
+// ---------- Toast 提示 ----------
+function showToast(msg) {
+  toastMessage.value = msg
+  if (toastTimer) clearTimeout(toastTimer)
+  toastTimer = setTimeout(() => {
+    toastMessage.value = ''
+  }, 2000)
+}
+
+// ==========================================================
+// 切换学校时重置评论草稿 & 聊天记录
+// （keep-alive 缓存了组件，路由参数变化不会重建实例）
+// ==========================================================
+watch(() => route.params.slug, () => {
+  showReview.value = false
+  editingReviewId.value = null
+  reviewText.value = ''
+  rating.value = 4
+  anon.value = true
+  msgs.value = []
+  aq.value = ''
+  rs.value = 'helpful'
+})
 </script>
 
 <style scoped>
@@ -796,5 +930,120 @@ function submitReview() {
   margin-top: 12px;
   font-size: 10px;
   color: var(--text3);
+}
+
+/* ====== 评论编辑/删除按钮 ====== */
+.rv-head-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.rv-own-acts {
+  display: flex;
+  gap: 2px;
+}
+
+.rv-own-acts button {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  color: var(--text3);
+  transition: all .15s;
+}
+
+.rv-edit:hover {
+  color: var(--accent2);
+  background: rgba(184, 115, 81, .08);
+}
+
+.rv-del:hover {
+  color: var(--warn);
+  background: rgba(196, 112, 98, .08);
+}
+
+/* ====== Toast 提示 ====== */
+.review-toast {
+  position: fixed;
+  bottom: 120px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 400;
+  padding: 10px 24px;
+  background: var(--text);
+  color: var(--bg);
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: var(--radius-full);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, .15);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.toast-enter-active,
+.toast-leave-active {
+  transition: all .25s var(--ease);
+}
+
+.toast-enter-from,
+.toast-leave-to {
+  opacity: 0;
+  transform: translateX(-50%) translateY(12px);
+}
+
+/* ====== 删除确认弹窗 ====== */
+.confirm-modal {
+  text-align: center;
+  max-width: 320px;
+  margin: auto;
+  border-radius: 20px 20px 0 0;
+}
+
+.confirm-modal h3 {
+  font-size: 18px;
+  margin-bottom: 8px;
+}
+
+.confirm-desc {
+  font-size: 14px;
+  color: var(--text3);
+  margin-bottom: 24px;
+}
+
+.confirm-acts {
+  display: flex;
+  gap: 12px;
+}
+
+.confirm-acts button {
+  flex: 1;
+  padding: 12px 0;
+  border-radius: var(--radius-full);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .15s;
+}
+
+.confirm-cancel {
+  background: var(--surface2);
+  color: var(--text2);
+}
+
+.confirm-cancel:active {
+  background: var(--bdr);
+}
+
+.confirm-danger {
+  background: var(--warn);
+  color: #fff;
+}
+
+.confirm-danger:active {
+  background: #b05e54;
 }
 </style>
