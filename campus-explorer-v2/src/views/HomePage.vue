@@ -130,23 +130,17 @@
       <div class="news-ticker" v-if="newsItems.length > 0">
         <div
           class="news-item"
-          :class="{ expanded: expandedNews === n.id }"
           v-for="n in newsItems"
           :key="n.id"
-          @click="toggleNews(n.id)"
+          @click="$router.push('/news/' + n.id)"
         >
           <span class="news-dot"></span>
           <div class="news-content">
             <div class="news-head-row">
               <span class="news-title">{{ n.title }}</span>
-              <span class="news-chevron" :class="{ on: expandedNews === n.id }">
-                <PhCaretDown :size="14" />
-              </span>
+              <span class="news-chevron"><PhCaretRight :size="14" /></span>
             </div>
             <span class="news-meta">{{ n.source }} · {{ n.date }}</span>
-            <transition name="news-expand">
-              <p class="news-desc" v-if="expandedNews === n.id">{{ n.desc }}</p>
-            </transition>
           </div>
         </div>
       </div>
@@ -162,7 +156,7 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { SCHOOLS } from '../data/schools.js'
 import { useAdminDataStore } from '../stores/adminData.js'
-import { PhMagnifyingGlass, PhArrowRight, PhStar, PhCaretDown } from '@phosphor-icons/vue'
+import { PhMagnifyingGlass, PhArrowRight, PhStar, PhCaretRight } from '@phosphor-icons/vue'
 
 const adminData = useAdminDataStore()
 
@@ -302,15 +296,6 @@ const gridSchools = computed(() => {
   // 按综合评分降序
   return [...list].sort((a, b) => b.scores.综合 - a.scores.综合).slice(0, 12)
 })
-
-// ==========================================================
-// ④ 播报栏 — 高考热点资讯（点击展开/收起）
-// ==========================================================
-const expandedNews = ref(null)
-
-function toggleNews(id) {
-  expandedNews.value = expandedNews.value === id ? null : id
-}
 
 const newsItems = computed(() => adminData.news)
 
@@ -622,8 +607,7 @@ onUnmounted(() => {
   transition: background .12s;
 }
 .news-item:last-child { border-bottom: none; }
-.news-item:active,
-.news-item.expanded { background: var(--surface2); }
+.news-item:active { background: var(--surface2); }
 
 .news-dot {
   flex-shrink: 0;
@@ -633,10 +617,6 @@ onUnmounted(() => {
   margin-top: 9px;
   transition: background .2s;
 }
-.news-item.expanded .news-dot {
-  background: var(--text);
-}
-
 .news-content {
   flex: 1;
   min-width: 0;
@@ -663,47 +643,13 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   margin-top: 2px;
-  transition: transform .25s var(--ease);
 }
-.news-chevron.on { transform: rotate(180deg); color: var(--accent2); }
 
 .news-meta {
   display: block;
   font-size: 11px;
   color: var(--text3);
   margin-top: 4px;
-}
-
-.news-desc {
-  font-size: 13px;
-  color: var(--text2);
-  line-height: 1.7;
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px dashed var(--bdr);
-}
-
-/* 展开/收起过渡 */
-.news-expand-enter-active {
-  transition: all .25s var(--ease);
-  overflow: hidden;
-}
-.news-expand-leave-active {
-  transition: all .2s var(--ease);
-  overflow: hidden;
-}
-.news-expand-enter-from,
-.news-expand-leave-to {
-  opacity: 0;
-  max-height: 0;
-  margin-top: 0;
-  padding-top: 0;
-  border-top-color: transparent;
-}
-.news-expand-enter-to,
-.news-expand-leave-from {
-  opacity: 1;
-  max-height: 120px;
 }
 
 /* ============================================================

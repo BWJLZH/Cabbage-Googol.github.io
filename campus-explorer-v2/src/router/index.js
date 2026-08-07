@@ -60,6 +60,17 @@ const routes = [
     meta: { adminOnly: true }
   },
   {
+    path: '/news/:id',
+    name: 'news-detail',
+    component: () => import('../views/NewsPage.vue'),
+    props: true
+  },
+  {
+    path: '/news',
+    name: 'news',
+    component: () => import('../views/NewsPage.vue')
+  },
+  {
     path: '/:pathMatch(.*)*',
     redirect: '/'
   }
