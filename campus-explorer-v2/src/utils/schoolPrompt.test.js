@@ -24,6 +24,15 @@ describe('buildSchoolPrompt', () => {
   it('无宿舍数据时不崩溃', () => {
     const p = buildSchoolPrompt({ ...school, dormitory: null })
     expect(p).toContain('清华大学')
+    expect(p).toContain('- 宿舍：暂无数据')
+  })
+
+  it('宿舍数据不完整时使用未知占位而不编造', () => {
+    const p = buildSchoolPrompt({ ...school, dormitory: { room_size: 4 } })
+    expect(p).toContain('未知床型')
+    expect(p).toContain('未知空调')
+    expect(p).toContain('门禁未知')
+    expect(p).toContain('未知独卫')
   })
 
   it('school 为 null 返回 null', () => {

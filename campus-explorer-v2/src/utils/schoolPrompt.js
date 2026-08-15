@@ -8,7 +8,7 @@ export function buildSchoolPrompt(school) {
 
   const d = school.dormitory || {}
   const dormLine = d.room_size
-    ? `- 宿舍：${d.room_size}人间、${d.bed_type || '未知床型'}、${d.ac_type || '未知空调'}、${d.has_private_bath ? '有' : '无'}独卫、门禁${d.curfew || '未知'}、网络${d.internet || '未知'}`
+    ? `- 宿舍：${d.room_size}人间、${d.bed_type || '未知床型'}、${d.ac_type || '未知空调'}、${d.has_private_bath === true ? '有' : d.has_private_bath === false ? '无' : '未知'}独卫、门禁${d.curfew || '未知'}、网络${d.internet || '未知'}`
     : '- 宿舍：暂无数据'
 
   return [
@@ -16,7 +16,7 @@ export function buildSchoolPrompt(school) {
     '风格：友好口语化、回答精炼（200字内）、不确定就建议查官网。',
     '以下是本校档案（与档案矛盾时不要编造）：',
     `- 类型：${school.type}｜城市：${school.city} ${school.province}`,
-    `- 评分：综合${school.scores.综合} 宿舍${school.scores.宿舍} 食堂${school.scores.食堂} 教学${school.scores.教学} 环境${school.scores.环境} 社交${school.scores.社交}`,
+    `- 评分（满分5）：综合${school.scores.综合} 宿舍${school.scores.宿舍} 食堂${school.scores.食堂} 教学${school.scores.教学} 环境${school.scores.环境} 社交${school.scores.社交}`,
     dormLine,
     `- 标签：${(school.tags || []).join('、')}`,
     `- 简介：${school.intro || '暂无'}`
