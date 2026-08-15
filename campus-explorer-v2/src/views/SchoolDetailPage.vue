@@ -148,11 +148,19 @@
         </div>
         <p class="ai-greet">你好！我是{{ s.name }}的在校生，有什么想了解的？</p>
         <div class="ai-quick">
-          <button v-for="q in quickQs" :key="q" @click="ask(q)">{{ q }}</button>
+          <button v-for="q in quickQs" :key="q" @click="ask(q)" :disabled="aiLoading">{{ q }}</button>
         </div>
-        <div class="ai-chat" v-if="msgs.length">
+        <div class="ai-chat" ref="chatBoxRef">
           <div class="chat-msg" v-for="(m, i) in msgs" :key="i" :class="m.r">
-            <span class="chat-bubble">{{ m.t }}</span>
+            <span class="chat-bubble">{{ m.t }}<span class="ai-cursor" v-if="m.streaming">|</span></span>
+          </div>
+          <div class="chat-msg bot" v-if="showAiDots">
+            <span class="chat-bubble chat-bubble--loading">
+              <span class="ai-dot"></span><span class="ai-dot"></span><span class="ai-dot"></span>
+            </span>
+          </div>
+          <div class="chat-msg bot" v-if="aiError">
+            <span class="chat-bubble chat-bubble--error">{{ aiError }}</span>
           </div>
         </div>
         <div class="ai-input">
@@ -160,8 +168,9 @@
             v-model="aq"
             @keyup.enter="ask(aq)"
             placeholder="输入问题..."
+            :disabled="aiLoading"
           >
-          <button @click="ask(aq)" :disabled="!aq.trim()"><PhPaperPlaneRight :size="18" /></button>
+          <button @click="ask(aq)" :disabled="!aq.trim() || aiLoading"><PhPaperPlaneRight :size="18" /></button>
         </div>
         <p class="ai-note">内容由AI生成，仅供参考</p>
       </div>
@@ -243,12 +252,14 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onDeactivated, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { SCHOOLS } from '../data/schools.js'
 import { loadLS, saveLS } from '../utils/storage.js'
 import { PhArrowLeft, PhStar, PhShare, PhSparkle, PhCheck, PhX, PhWarning, PhNotePencil, PhGraduationCap, PhPaperPlaneRight, PhArrowsLeftRight, PhCaretUp, PhPencil, PhTrash } from '@phosphor-icons/vue'
 import { useAuthStore } from '../stores/auth.js'
+import { fetchAIResponseStream, isApiConfigured } from '../services/aiService.js'
+import { buildSchoolPrompt } from '../utils/schoolPrompt.js'
 
 const route = useRoute()
 const router = useRouter()
@@ -264,6 +275,10 @@ const isComp = computed(() => compareList.value.includes(route.params.slug))
 
 const msgs = ref([])
 const aq = ref('')
+const aiLoading = ref(false)
+const aiError = ref('')
+const chatBoxRef = ref(null)
+let aiStream = null
 const rs = ref('helpful')
 const showReview = ref(false)
 const editingReviewId = ref(null)   // null=新建模式, 非null=编辑模式
@@ -321,25 +336,68 @@ function scoreColor(k) {
   return m[k] || '#C17F59'
 }
 
-function ask(q) {
+// ==========================================================
+// AI 学长问答 — 真实 API 流式输出（复用悬浮球模式）
+// ==========================================================
+async function ask(q) {
   const t = (typeof q === 'string' ? q : aq.value).trim()
-  if (!t) return
+  if (!t || aiLoading.value) return
+  if (!s.value) return
   aq.value = ''
+  aiError.value = ''
+
+  if (!isApiConfigured()) {
+    aiError.value = 'AI 尚未配置，请在 src/services/aiService.js 中填入 API 信息'
+    return
+  }
+
   msgs.value.push({ r: 'user', t })
-  setTimeout(() => {
-    msgs.value.push({ r: 'bot', t: genAI(t, s.value) })
-  }, 1000 + Math.random() * 2000)
+  const aiMsg = { r: 'bot', t: '', streaming: true }
+  msgs.value.push(aiMsg)
+  aiLoading.value = true
+
+  const context = msgs.value
+    .filter(m => !m.streaming)
+    .slice(-10)
+    .map(m => ({ role: m.r === 'user' ? 'user' : 'assistant', content: m.t }))
+
+  try {
+    aiStream = await fetchAIResponseStream(context, { systemPrompt: buildSchoolPrompt(s.value) })
+    for await (const chunk of aiStream) {
+      aiMsg.t += chunk
+      await scrollChatBottom()
+    }
+    aiMsg.streaming = false
+  } catch (err) {
+    if (!aiMsg.t) msgs.value.pop()
+    else aiMsg.streaming = false
+    aiError.value = err.message || '请求失败，请稍后重试'
+  } finally {
+    aiLoading.value = false
+    aiStream = null
+  }
 }
 
-function genAI(q, s) {
-  if (!s) return '暂无数据'
-  if (q.includes('空调')) return s.dormitory.has_ac ? '有' + s.dormitory.ac_type + '！夏天不用担心。' : '部分宿舍暂未全覆盖。'
-  if (q.includes('食堂') || q.includes('吃')) return '食堂评分' + s.scores.食堂?.toFixed(1) + '分。选择挺多的！'
-  if (q.includes('宿舍') || q.includes('住')) return s.dormitory.room_size + '人间，' + s.dormitory.bed_type + '，' + (s.dormitory.has_private_bath ? '有' : '部分有') + '独卫。'
-  if (q.includes('交通')) return s.city + '公共交通比较方便。'
-  if (q.includes('就业')) return s.type + '院校，毕业生就业认可度不错。'
-  return '关于"' + q + '"，建议结合官网信息和在校生评价综合判断。'
+// 中断进行中的流（切学校 / 离开页面时调用）
+function cancelAiStream() {
+  if (aiStream) {
+    try { aiStream.cancel() } catch { /* 忽略中断异常 */ }
+    aiStream = null
+  }
 }
+
+async function scrollChatBottom() {
+  await nextTick()
+  const el = chatBoxRef.value
+  if (el) el.scrollTop = el.scrollHeight
+}
+
+// 响应前加载点：加载中且最后一条 bot 消息仍为空
+const showAiDots = computed(() => {
+  if (!aiLoading.value) return false
+  const last = msgs.value[msgs.value.length - 1]
+  return last ? !last.t : false
+})
 
 function toggleFav() {
   const slug = route.params.slug
@@ -471,6 +529,9 @@ function showToast(msg) {
 // （keep-alive 缓存了组件，路由参数变化不会重建实例）
 // ==========================================================
 watch(() => route.params.slug, () => {
+  cancelAiStream()
+  aiLoading.value = false
+  aiError.value = ''
   showReview.value = false
   editingReviewId.value = null
   reviewText.value = ''
@@ -479,6 +540,11 @@ watch(() => route.params.slug, () => {
   msgs.value = []
   aq.value = ''
   rs.value = 'helpful'
+})
+
+// 离开页面（keep-alive 缓存）时中断流，防止回传写进错误页面
+onDeactivated(() => {
+  cancelAiStream()
 })
 </script>
 
@@ -863,6 +929,8 @@ watch(() => route.params.slug, () => {
 }
 
 .ai-chat {
+  max-height: 260px;
+  overflow-y: auto;
   margin-bottom: 16px;
 }
 
@@ -1046,4 +1114,42 @@ watch(() => route.params.slug, () => {
 .confirm-danger:active {
   background: #b05e54;
 }
+
+/* ====== AI 流式输出状态 ====== */
+.ai-cursor {
+  animation: ai-blink 1s step-end infinite;
+  font-weight: 700;
+}
+@keyframes ai-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.chat-bubble--loading {
+  display: inline-flex;
+  gap: 4px;
+  padding: 14px 16px;
+}
+.ai-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--text3);
+  animation: ai-dot-bounce 1s ease-in-out infinite;
+}
+.ai-dot:nth-child(2) { animation-delay: .15s; }
+.ai-dot:nth-child(3) { animation-delay: .3s; }
+@keyframes ai-dot-bounce {
+  0%, 100% { opacity: .3; transform: translateY(0); }
+  50% { opacity: 1; transform: translateY(-3px); }
+}
+
+.chat-bubble--error {
+  background: rgba(212, 117, 107, .1);
+  color: var(--warn);
+  font-size: 13px;
+}
+
+.ai-quick button:disabled,
+.ai-input button:disabled { opacity: .4; cursor: not-allowed; }
+.ai-input input:disabled { opacity: .6; }
 </style>
