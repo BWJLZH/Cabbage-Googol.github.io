@@ -152,7 +152,7 @@
         </div>
         <div class="ai-chat" ref="chatBoxRef">
           <div class="chat-msg" v-for="(m, i) in msgs" :key="i" :class="m.r">
-            <span class="chat-bubble">{{ m.t }}<span class="ai-cursor" v-if="m.streaming">|</span></span>
+            <span class="chat-bubble">{{ m.t }}<span class="ai-cursor" v-if="m.streaming && m.t">|</span></span>
           </div>
           <div class="chat-msg bot" v-if="showAiDots">
             <span class="chat-bubble chat-bubble--loading">
@@ -279,6 +279,7 @@ const aiLoading = ref(false)
 const aiError = ref('')
 const chatBoxRef = ref(null)
 let aiStream = null
+let aiGen = 0   // 请求代际计数：cancel 或新请求会使其失效，防陈旧流回写
 const rs = ref('helpful')
 const showReview = ref(false)
 const editingReviewId = ref(null)   // null=新建模式, 非null=编辑模式
@@ -351,6 +352,7 @@ async function ask(q) {
     return
   }
 
+  const g = ++aiGen
   msgs.value.push({ r: 'user', t })
   const aiMsg = { r: 'bot', t: '', streaming: true }
   msgs.value.push(aiMsg)
@@ -362,26 +364,42 @@ async function ask(q) {
     .map(m => ({ role: m.r === 'user' ? 'user' : 'assistant', content: m.t }))
 
   try {
-    aiStream = await fetchAIResponseStream(context, { systemPrompt: buildSchoolPrompt(s.value) })
-    for await (const chunk of aiStream) {
+    const stream = await fetchAIResponseStream(context, { systemPrompt: buildSchoolPrompt(s.value) })
+    // 请求已被取消（切学校/离开页面）→ 丢弃陈旧流，不写入任何状态
+    if (g !== aiGen) {
+      try { stream.cancel?.().catch(() => {}) } catch {}
+      return
+    }
+    aiStream = stream
+    for await (const chunk of stream) {
+      if (g !== aiGen) return
       aiMsg.t += chunk
       await scrollChatBottom()
     }
+    if (g !== aiGen) return
+    if (!aiMsg.t) {
+      msgs.value.pop()
+      return
+    }
     aiMsg.streaming = false
   } catch (err) {
+    if (g !== aiGen) return
     if (!aiMsg.t) msgs.value.pop()
     else aiMsg.streaming = false
     aiError.value = err.message || '请求失败，请稍后重试'
   } finally {
-    aiLoading.value = false
-    aiStream = null
+    if (g === aiGen) {
+      aiLoading.value = false
+      aiStream = null
+    }
   }
 }
 
 // 中断进行中的流（切学校 / 离开页面时调用）
 function cancelAiStream() {
+  aiGen++
   if (aiStream) {
-    try { aiStream.cancel() } catch { /* 忽略中断异常 */ }
+    try { aiStream.cancel?.().catch(() => {}) } catch { /* 忽略中断异常 */ }
     aiStream = null
   }
 }
@@ -923,7 +941,7 @@ onDeactivated(() => {
   transition: all .15s;
 }
 
-.ai-quick button:hover {
+.ai-quick button:hover:not(:disabled) {
   color: var(--accent2);
   background: rgba(193, 127, 89, .08);
 }
