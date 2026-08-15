@@ -324,7 +324,7 @@ import { PhArrowLeft, PhStar, PhShare, PhSparkle, PhCheck, PhX, PhWarning, PhNot
 import { useAuthStore } from '../stores/auth.js'
 import { useAdminDataStore } from '../stores/adminData.js'
 import { listVideos } from '../utils/videoStore.js'
-import { showToast } from '../composables/ui.js'
+import { showToast as globalToast } from '../composables/ui.js'
 import { fetchAIResponseStream, isApiConfigured } from '../services/aiService.js'
 import { buildSchoolPrompt } from '../utils/schoolPrompt.js'
 
@@ -532,7 +532,7 @@ function shareIt() {
   if (navigator.share) {
     navigator.share({ title: s.value?.name, url }).catch(() => {})
   } else {
-    navigator.clipboard.writeText(url).then(() => showToast('链接已复制')).catch(() => showToast('复制失败，请手动复制地址栏链接'))
+    navigator.clipboard.writeText(url).then(() => globalToast('链接已复制')).catch(() => globalToast('复制失败，请手动复制地址栏链接'))
   }
 }
 
