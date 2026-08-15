@@ -161,6 +161,10 @@ function parseStreamChunk(parsed) {
 // ============================================================
 // 非流式请求（备用）
 // ============================================================
+/**
+ * @param {Array<{role: string, content: string}>} messages 对话消息（不含 system）
+ * @param {{ systemPrompt?: string }} [options] 可选配置；systemPrompt 不传（undefined）时使用 AI_CONFIG.systemPrompt。注意：不要传 null（默认参数只对 undefined 生效）
+ */
 export async function fetchAIResponse(messages, options = {}) {
   if (!isApiConfigured()) {
     throw new Error('AI 服务未配置，请在 src/services/aiService.js 中填入 apiUrl、apiKey 和 model')
@@ -198,6 +202,10 @@ export async function fetchAIResponse(messages, options = {}) {
 // ============================================================
 // 流式请求 — 返回 async iterator，逐块 yield delta 文本
 // ============================================================
+/**
+ * @param {Array<{role: string, content: string}>} messages 对话消息（不含 system）
+ * @param {{ systemPrompt?: string }} [options] 可选配置；systemPrompt 不传（undefined）时使用 AI_CONFIG.systemPrompt。注意：不要传 null（默认参数只对 undefined 生效）
+ */
 export async function fetchAIResponseStream(messages, options = {}) {
   if (!isApiConfigured()) {
     throw new Error('AI 服务未配置，请在 src/services/aiService.js 中填入 apiUrl、apiKey 和 model')
