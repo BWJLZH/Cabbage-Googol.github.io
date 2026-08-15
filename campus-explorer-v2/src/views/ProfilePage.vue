@@ -269,6 +269,7 @@ import { SCHOOLS } from '../data/schools.js'
 import { loadLS } from '../utils/storage.js'
 import { buildBackup, validateBackup, restoreBackup } from '../utils/backup.js'
 import { useAdminDataStore } from '../stores/adminData.js'
+import { showToast, showConfirm } from '../composables/ui.js'
 import { PhNotePencil, PhLock, PhPower, PhCamera, PhCaretRight, PhHeart, PhStar, PhMapPin, PhExam, PhPlus, PhX, PhGear, PhDownloadSimple } from '@phosphor-icons/vue'
 
 // ============================================================
@@ -373,8 +374,9 @@ function onSaveScore() {
   showScoreModal.value = false
 }
 
-function onDeleteScore(id) {
-  if (confirm('确定删除这条成绩记录吗？')) {
+async function onDeleteScore(id) {
+  const ok = await showConfirm({ title: '删除成绩', message: '确定删除这条成绩记录吗？', danger: true })
+  if (ok) {
     userData.deleteScore(id)
   }
 }
@@ -396,7 +398,7 @@ function onAvatarSelected(event) {
     try {
       await authStore.updateAvatar(e.target.result)
     } catch (err) {
-      alert(err.message || '上传失败')
+      showToast(err.message || '上传失败')
     }
   }
   reader.readAsDataURL(file)
@@ -499,14 +501,14 @@ function onImportFile(event) {
     try {
       const obj = JSON.parse(reader.result)
       if (!validateBackup(obj)) {
-        alert('备份文件格式不正确')
+        showToast('备份文件格式不正确')
         return
       }
       pendingBackup.value = obj
       showBackupModal.value = false
       showImportConfirm.value = true
     } catch {
-      alert('备份文件格式不正确')
+      showToast('备份文件格式不正确')
     }
   }
   reader.readAsText(file)

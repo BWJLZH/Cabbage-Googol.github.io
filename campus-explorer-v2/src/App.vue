@@ -49,6 +49,10 @@
 
     <!-- AI 问答悬浮球 — 登录页隐藏 -->
     <AiFloatingBall v-if="showAiBall" />
+
+    <!-- 全局轻提示 + 确认框（移动端适配） -->
+    <AppToast />
+    <AppConfirm />
   </div>
 </template>
 
@@ -58,6 +62,8 @@ import { useRoute } from 'vue-router'
 import { loadLS } from './utils/storage.js'
 import { useAuthStore } from './stores/auth.js'
 import AiFloatingBall from './components/AiFloatingBall.vue'
+import AppToast from './components/AppToast.vue'
+import AppConfirm from './components/AppConfirm.vue'
 import { PhHouse, PhSparkle, PhArrowsLeftRight, PhUsersThree, PhUserCircle } from '@phosphor-icons/vue'
 
 const route = useRoute()

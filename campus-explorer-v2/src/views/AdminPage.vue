@@ -275,6 +275,7 @@ import { useAuthStore } from '../stores/auth.js'
 import { useAdminDataStore } from '../stores/adminData.js'
 import { PhArrowLeft, PhPlus, PhX, PhCamera } from '@phosphor-icons/vue'
 import { addVideo, listVideos, deleteVideo } from '../utils/videoStore.js'
+import { showToast, showConfirm } from '../composables/ui.js'
 
 const authStore = useAuthStore()
 const adminData = useAdminDataStore()
@@ -361,14 +362,14 @@ function onSaveSchool() {
     major_difficulty: editData.value.major_difficulty,
     canteen_price: editData.value.canteen_price
   })
-  alert('保存成功')
+  showToast('保存成功')
 }
 
 // ====== 图片 ======
 function onUploadImage(slug, e) {
   const file = e.target.files?.[0]
   if (!file) return
-  if (file.size > 500 * 1024) { alert('图片不能超过500KB'); return }
+  if (file.size > 500 * 1024) { showToast('图片不能超过500KB'); return }
   const reader = new FileReader()
   reader.onload = () => adminData.setSchoolImage(slug, reader.result)
   reader.readAsDataURL(file)
@@ -395,15 +396,15 @@ function onVideoFileSelected(e) {
   if (!f) return
   // Windows 下部分视频文件 MIME 为空，扩展名兜底识别
   const isVideo = f.type.startsWith('video/') || /\.(mp4|webm|ogg|mov|m4v|mkv|avi|flv|wmv)$/i.test(f.name)
-  if (!isVideo) { alert('请选择视频文件（mp4/webm/mov/mkv 等）'); return }
-  if (f.size > 50 * 1024 * 1024) { alert('视频不能超过50MB'); return }
+  if (!isVideo) { showToast('请选择视频文件（mp4/webm/mov/mkv 等）'); return }
+  if (f.size > 50 * 1024 * 1024) { showToast('视频不能超过50MB'); return }
   videoFile.value = f
   videoFileName.value = f.name
 }
 
 async function uploadVideo() {
   if (!videoFile.value) return
-  if (!videoTitle.value.trim()) { alert('请填写视频标题'); return }
+  if (!videoTitle.value.trim()) { showToast('请填写视频标题'); return }
   videoUploading.value = true
   try {
     await addVideo({
@@ -417,14 +418,15 @@ async function uploadVideo() {
     videoFileName.value = ''
     videoTitle.value = ''
     await loadVideoList()
-    alert('上传成功')
+    showToast('上传成功')
   } finally {
     videoUploading.value = false
   }
 }
 
 async function removeVideo(v) {
-  if (!confirm(`确定删除视频「${v.title}」？`)) return
+  const ok = await showConfirm({ title: '删除视频', message: `确定删除视频「${v.title}」？删除后无法恢复。`, danger: true })
+  if (!ok) return
   await deleteVideo(v.id)
   await loadVideoList()
 }
@@ -440,9 +442,9 @@ const roleMap = { student: '学生', parent: '家长', admin: '管理员' }
 const logs = computed(() => authStore.getLoginLogs().reverse().slice(0, 20))
 
 function onSaveSession() {
-  if (sessionDays.value < 1) { alert('至少1天'); return }
+  if (sessionDays.value < 1) { showToast('至少1天'); return }
   authStore.updateSessionDays(sessionDays.value)
-  alert('已更新')
+  showToast('已更新')
 }
 async function onAddAdmin() {
   adminError.value = ''
@@ -455,7 +457,7 @@ async function onAddAdmin() {
     newAdmin.username = ''
     newAdmin.email = ''
     newAdmin.password = ''
-    alert('管理员添加成功')
+    showToast('管理员添加成功')
   } catch (err) { adminError.value = err.message }
 }
 function fmtTime(ts) {
