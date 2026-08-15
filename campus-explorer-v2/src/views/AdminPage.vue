@@ -215,7 +215,8 @@
           <input type="file" accept="video/*" style="display:none" ref="videoFileInput" @change="onVideoFileSelected" />
           <button class="add-btn" @click="videoFileInput?.click()">选择视频文件（≤50MB）</button>
           <span v-if="videoFileName" class="muted" style="margin-left:8px">{{ videoFileName }}</span>
-          <button class="sbm" style="width:100%;margin-top:12px;padding:12px" :disabled="!videoFile || !videoTitle.trim() || videoUploading" @click="uploadVideo">
+          <p class="muted" v-if="videoFile && !videoTitle.trim()" style="margin-top:8px">已选择 {{ videoFileName }}，请填写标题后点击上传</p>
+          <button class="sbm" style="width:100%;margin-top:12px;padding:12px" :disabled="!videoFile || videoUploading" @click="uploadVideo">
             {{ videoUploading ? '上传中...' : '上传视频' }}
           </button>
         </div>
@@ -268,7 +269,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed } from 'vue'
+import { ref, shallowRef, reactive, computed } from 'vue'
 import { SCHOOLS } from '../data/schools.js'
 import { useAuthStore } from '../stores/auth.js'
 import { useAdminDataStore } from '../stores/adminData.js'
@@ -377,7 +378,7 @@ function onUploadImage(slug, e) {
 // ====== 校园视频 ======
 const videoSlug = ref('')
 const videoTitle = ref('')
-const videoFile = ref(null)
+const videoFile = shallowRef(null)
 const videoFileName = ref('')
 const videoUploading = ref(false)
 const videoList = ref([])
@@ -392,14 +393,17 @@ function onVideoFileSelected(e) {
   const f = e.target.files?.[0]
   e.target.value = ''
   if (!f) return
-  if (!f.type.startsWith('video/')) { alert('请选择视频文件'); return }
+  // Windows 下部分视频文件 MIME 为空，扩展名兜底识别
+  const isVideo = f.type.startsWith('video/') || /\.(mp4|webm|ogg|mov|m4v|mkv|avi|flv|wmv)$/i.test(f.name)
+  if (!isVideo) { alert('请选择视频文件（mp4/webm/mov/mkv 等）'); return }
   if (f.size > 50 * 1024 * 1024) { alert('视频不能超过50MB'); return }
   videoFile.value = f
   videoFileName.value = f.name
 }
 
 async function uploadVideo() {
-  if (!videoFile.value || !videoTitle.value.trim()) return
+  if (!videoFile.value) return
+  if (!videoTitle.value.trim()) { alert('请填写视频标题'); return }
   videoUploading.value = true
   try {
     await addVideo({
