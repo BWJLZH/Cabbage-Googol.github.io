@@ -23,6 +23,11 @@ const routes = [
     component: () => import('../views/SchoolDetailPage.vue')
   },
   {
+    path: '/school/:slug/map',
+    name: 'school-map',
+    component: () => import('../views/MapPlaceholderPage.vue')
+  },
+  {
     path: '/compare',
     name: 'compare',
     component: () => import('../views/ComparePage.vue'),

@@ -149,6 +149,21 @@
             <input v-model="editData.dormitory.note" class="ss-input" />
           </div>
         </div>
+        <h4 style="margin:16px 0 8px;font-weight:600">学习与生活</h4>
+        <div class="edit-grid">
+          <div class="eg-item">
+            <span class="eg-label">校区位置</span>
+            <input v-model="editData.campuses" class="ss-input" placeholder="如：仙林/鼓楼校区" />
+          </div>
+          <div class="eg-item">
+            <span class="eg-label">专业课难度(1-5)</span>
+            <input v-model.number="editData.major_difficulty" class="ss-input" type="number" step="0.1" min="1" max="5" />
+          </div>
+          <div class="eg-item">
+            <span class="eg-label">食堂价格(人均)</span>
+            <input v-model="editData.canteen_price" class="ss-input" placeholder="如：15-25元" />
+          </div>
+        </div>
         <button class="sbm" style="width:100%;margin-top:20px;padding:12px" @click="onSaveSchool">保存学校数据</button>
       </div>
     </div>
@@ -175,7 +190,39 @@
     </div>
 
     <!-- ============================================================
-         Tab 5: 系统设置
+         Tab 5: 校园视频
+         ============================================================ -->
+    <div class="sec" v-if="tab === 'videos'">
+      <h3 class="sl">校园视频</h3>
+      <select v-model="videoSlug" class="prov-select" @change="loadVideoList">
+        <option value="">选择学校</option>
+        <option v-for="s in SCHOOLS" :key="s.slug" :value="s.slug">{{ s.name }}</option>
+      </select>
+
+      <template v-if="videoSlug">
+        <div style="margin-top:16px">
+          <input v-model="videoTitle" class="field-input" placeholder="视频标题" style="margin-bottom:8px" />
+          <input type="file" accept="video/*" style="display:none" ref="videoFileInput" @change="onVideoFileSelected" />
+          <button class="add-btn" @click="videoFileInput?.click()">选择视频文件（≤50MB）</button>
+          <span v-if="videoFileName" class="muted" style="margin-left:8px">{{ videoFileName }}</span>
+          <button class="sbm" style="width:100%;margin-top:12px;padding:12px" :disabled="!videoFile || !videoTitle.trim() || videoUploading" @click="uploadVideo">
+            {{ videoUploading ? '上传中...' : '上传视频' }}
+          </button>
+        </div>
+
+        <div style="margin-top:16px">
+          <p class="muted" v-if="!videoList.length">该校暂无视频</p>
+          <div class="v-item" v-for="v in videoList" :key="v.id">
+            <span class="v-title">{{ v.title }}</span>
+            <span class="v-meta">{{ fmtSize(v.size) }} · {{ fmtDate(v.createdAt) }}</span>
+            <button class="v-del" @click="removeVideo(v)">删除</button>
+          </div>
+        </div>
+      </template>
+    </div>
+
+    <!-- ============================================================
+         Tab 6: 系统设置
          ============================================================ -->
     <div class="sec" v-if="tab === 'settings'">
       <h3 class="sl">系统设置</h3>
@@ -216,6 +263,7 @@ import { SCHOOLS } from '../data/schools.js'
 import { useAuthStore } from '../stores/auth.js'
 import { useAdminDataStore } from '../stores/adminData.js'
 import { PhArrowLeft, PhPlus, PhX, PhCamera } from '@phosphor-icons/vue'
+import { addVideo, listVideos, deleteVideo } from '../utils/videoStore.js'
 
 const authStore = useAuthStore()
 const adminData = useAdminDataStore()
@@ -225,6 +273,7 @@ const tabs = [
   { key: 'news', label: '热点资讯' },
   { key: 'school', label: '学校数据' },
   { key: 'images', label: '校园图片' },
+  { key: 'videos', label: '校园视频' },
   { key: 'settings', label: '系统设置' }
 ]
 const tab = ref('carousel')
@@ -282,7 +331,10 @@ function onSelectSchool() {
     _bg: merged._bg,
     intro: merged.intro,
     scores: { ...merged.scores },
-    dormitory: { ...merged.dormitory }
+    dormitory: { ...merged.dormitory },
+    campuses: merged.campuses,
+    major_difficulty: merged.major_difficulty,
+    canteen_price: merged.canteen_price
   }
   tagsStr.value = merged.tags.join(', ')
 }
@@ -293,7 +345,10 @@ function onSaveSchool() {
     intro: editData.value.intro,
     scores: editData.value.scores,
     dormitory: editData.value.dormitory,
-    tags: tagsStr.value.split(',').map(t => t.trim()).filter(Boolean)
+    tags: tagsStr.value.split(',').map(t => t.trim()).filter(Boolean),
+    campuses: editData.value.campuses,
+    major_difficulty: editData.value.major_difficulty,
+    canteen_price: editData.value.canteen_price
   })
   alert('保存成功')
 }
@@ -308,6 +363,60 @@ function onUploadImage(slug, e) {
   reader.readAsDataURL(file)
   e.target.value = ''
 }
+
+// ====== 校园视频 ======
+const videoSlug = ref('')
+const videoTitle = ref('')
+const videoFile = ref(null)
+const videoFileName = ref('')
+const videoUploading = ref(false)
+const videoList = ref([])
+const videoFileInput = ref(null)
+
+async function loadVideoList() {
+  if (!videoSlug.value) { videoList.value = []; return }
+  videoList.value = await listVideos(videoSlug.value)
+}
+
+function onVideoFileSelected(e) {
+  const f = e.target.files?.[0]
+  e.target.value = ''
+  if (!f) return
+  if (!f.type.startsWith('video/')) { alert('请选择视频文件'); return }
+  if (f.size > 50 * 1024 * 1024) { alert('视频不能超过50MB'); return }
+  videoFile.value = f
+  videoFileName.value = f.name
+}
+
+async function uploadVideo() {
+  if (!videoFile.value || !videoTitle.value.trim()) return
+  videoUploading.value = true
+  try {
+    await addVideo({
+      slug: videoSlug.value,
+      title: videoTitle.value.trim(),
+      blob: videoFile.value,
+      size: videoFile.value.size,
+      createdAt: Date.now()
+    })
+    videoFile.value = null
+    videoFileName.value = ''
+    videoTitle.value = ''
+    await loadVideoList()
+    alert('上传成功')
+  } finally {
+    videoUploading.value = false
+  }
+}
+
+async function removeVideo(v) {
+  if (!confirm(`确定删除视频「${v.title}」？`)) return
+  await deleteVideo(v.id)
+  await loadVideoList()
+}
+
+function fmtSize(bytes) { return (bytes / 1024 / 1024).toFixed(1) + ' MB' }
+function fmtDate(ts) { return new Date(ts).toLocaleDateString('zh-CN') }
 
 // ====== 系统设置 ======
 const sessionDays = ref(authStore.getConfig().sessionDays || 7)
@@ -405,6 +514,17 @@ function fmtTime(ts) {
 .img-name { font-size: 13px; font-weight: 500; display: block; margin-bottom: 4px; }
 .img-upload { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: var(--radius-full); font-size: 11px; color: var(--accent2); background: rgba(184,115,81,.06); cursor: pointer; }
 .img-del { display: block; margin: 4px auto 0; font-size: 11px; color: var(--warn); }
+
+/* ====== VIDEOS ====== */
+.v-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px; background: #fff;
+  border: 1px solid var(--bdr); border-radius: 8px;
+  margin-bottom: 8px;
+}
+.v-title { flex: 1; min-width: 0; font-size: 14px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.v-meta { flex-shrink: 0; font-size: 11px; color: var(--text3); }
+.v-del { flex-shrink: 0; padding: 4px 12px; border-radius: var(--radius-full); font-size: 12px; color: var(--warn); background: rgba(196,112,98,.06); cursor: pointer; }
 
 /* ====== SETTINGS ====== */
 .set-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--bdr); }

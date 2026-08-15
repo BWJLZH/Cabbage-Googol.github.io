@@ -28,6 +28,16 @@
       </div>
     </div>
 
+    <!-- 实景地图入口（占位） -->
+    <div class="map-entry" @click="$router.push('/school/' + s.slug + '/map')">
+      <span class="me-icon"><PhMapTrifold :size="22" /></span>
+      <div class="me-body">
+        <span class="me-title">实景地图</span>
+        <span class="me-sub">360° 逛校园 · 建设中</span>
+      </div>
+      <span class="me-arrow"><PhCaretRight :size="16" /></span>
+    </div>
+
     <!-- Scores -->
     <div class="sec">
       <h3 class="sl">综合评分</h3>
@@ -77,6 +87,39 @@
           <span><PhWarning :size="14" /></span>{{ s.dormitory.note }}
         </div>
         <p class="dorm-conf"><PhCheck :size="14" /> {{ s.dormitory.confirmed_by }} 位学长确认</p>
+      </div>
+    </div>
+
+    <!-- Campus Life -->
+    <div class="sec">
+      <h3 class="sl">学习与生活</h3>
+      <div class="dorm-card life-card">
+        <div class="life-row">
+          <span class="life-label"><PhMapPin :size="16" /> 校区位置</span>
+          <span class="life-val">{{ s.campuses || '暂无数据' }}</span>
+        </div>
+        <div class="life-row">
+          <span class="life-label"><PhBooks :size="16" /> 专业课难度</span>
+          <span class="life-val">
+            <span class="life-stars">
+              <PhStar v-for="i in 5" :key="i" :size="14" :weight="i <= Math.round(s.major_difficulty || 0) ? 'fill' : 'regular'" />
+            </span>
+            {{ (s.major_difficulty ?? 0).toFixed(1) }}/5
+          </span>
+        </div>
+        <div class="life-row">
+          <span class="life-label"><PhBowlFood :size="16" /> 食堂价格</span>
+          <span class="life-val">人均 {{ s.canteen_price || '暂无数据' }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Videos -->
+    <div class="sec" v-if="videos.length">
+      <h3 class="sl">校园视频 <span class="sl-sub">{{ videos.length }} 个</span></h3>
+      <div class="video-card" v-for="v in videos" :key="v.id">
+        <video :src="v.url" controls preload="metadata"></video>
+        <p class="video-title">{{ v.title }}</p>
       </div>
     </div>
 
@@ -252,24 +295,27 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onDeactivated, nextTick } from 'vue'
+import { ref, computed, watch, onMounted, onActivated, onDeactivated, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { SCHOOLS } from '../data/schools.js'
 import { loadLS, saveLS } from '../utils/storage.js'
-import { PhArrowLeft, PhStar, PhShare, PhSparkle, PhCheck, PhX, PhWarning, PhNotePencil, PhGraduationCap, PhPaperPlaneRight, PhArrowsLeftRight, PhCaretUp, PhPencil, PhTrash } from '@phosphor-icons/vue'
+import { PhArrowLeft, PhStar, PhShare, PhSparkle, PhCheck, PhX, PhWarning, PhNotePencil, PhGraduationCap, PhPaperPlaneRight, PhArrowsLeftRight, PhCaretUp, PhPencil, PhTrash, PhMapTrifold, PhMapPin, PhBooks, PhBowlFood, PhCaretRight } from '@phosphor-icons/vue'
 import { useAuthStore } from '../stores/auth.js'
+import { useAdminDataStore } from '../stores/adminData.js'
+import { listVideos } from '../utils/videoStore.js'
 import { fetchAIResponseStream, isApiConfigured } from '../services/aiService.js'
 import { buildSchoolPrompt } from '../utils/schoolPrompt.js'
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
+const adminData = useAdminDataStore()
 
 const favorites = ref(loadLS('cx-fav', []))
 const compareList = ref(loadLS('cx-cmp', []))
 const userReviews = ref(loadLS('cx-rev', []))
 
-const s = computed(() => SCHOOLS.find(x => x.slug === route.params.slug))
+const s = computed(() => adminData.getMergedSchool(route.params.slug))
 const isFav = computed(() => favorites.value.includes(route.params.slug))
 const isComp = computed(() => compareList.value.includes(route.params.slug))
 
@@ -394,6 +440,25 @@ async function ask(q) {
     }
   }
 }
+
+// ==========================================================
+// 校园视频（IndexedDB）
+// ==========================================================
+const videos = ref([])
+
+async function loadVideos() {
+  revokeVideoUrls()
+  const list = await listVideos(route.params.slug)
+  videos.value = list.map(v => ({ ...v, url: URL.createObjectURL(v.blob) }))
+}
+
+function revokeVideoUrls() {
+  for (const v of videos.value) URL.revokeObjectURL(v.url)
+  videos.value = []
+}
+
+onMounted(() => { loadVideos() })
+onActivated(() => { loadVideos() })
 
 // 中断进行中的流（切学校 / 离开页面时调用）
 function cancelAiStream() {
@@ -550,6 +615,7 @@ watch(() => route.params.slug, () => {
   cancelAiStream()
   aiLoading.value = false
   aiError.value = ''
+  loadVideos()
   showReview.value = false
   editingReviewId.value = null
   reviewText.value = ''
@@ -563,6 +629,7 @@ watch(() => route.params.slug, () => {
 // 离开页面（keep-alive 缓存）时中断流，防止回传写进错误页面
 onDeactivated(() => {
   cancelAiStream()
+  revokeVideoUrls()
 })
 </script>
 
@@ -1170,4 +1237,50 @@ onDeactivated(() => {
 .ai-quick button:disabled,
 .ai-input button:disabled { opacity: .4; cursor: not-allowed; }
 .ai-input input:disabled { opacity: .6; }
+
+/* ====== 实景地图入口 ====== */
+.map-entry {
+  margin: 0 20px 8px;
+  display: flex; align-items: center; gap: 12px;
+  background: #fff; border: 1px solid var(--bdr);
+  border-radius: var(--radius-lg); padding: 14px 16px;
+  box-shadow: var(--shadow); cursor: pointer;
+  transition: all .15s;
+}
+.map-entry:active { transform: scale(.98); }
+.me-icon {
+  width: 40px; height: 40px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(107, 141, 191, .12); color: var(--info);
+  border-radius: 10px;
+}
+.me-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.me-title { font-size: 15px; font-weight: 600; color: var(--text); }
+.me-sub { font-size: 12px; color: var(--text3); }
+.me-arrow { color: var(--text3); flex-shrink: 0; display: flex; }
+
+/* ====== 学习与生活 ====== */
+.life-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 8px 0; border-top: 1px solid var(--bdr); gap: 12px;
+}
+.life-row:first-child { border-top: none; padding-top: 0; }
+.life-label {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 14px; color: var(--text2); flex-shrink: 0;
+}
+.life-val {
+  font-size: 14px; color: var(--text); font-weight: 500;
+  text-align: right; display: flex; align-items: center; gap: 6px;
+}
+.life-stars { display: inline-flex; gap: 1px; color: var(--accent2); }
+
+/* ====== 校园视频 ====== */
+.video-card {
+  background: #fff; border: 1px solid var(--bdr);
+  border-radius: var(--radius-lg); box-shadow: var(--shadow);
+  overflow: hidden; margin-bottom: 12px;
+}
+.video-card video { width: 100%; display: block; aspect-ratio: 16/9; background: #000; }
+.video-title { padding: 12px 16px; font-size: 14px; font-weight: 500; color: var(--text); }
 </style>
