@@ -83,11 +83,11 @@ export function isApiConfigured() {
 // ============================================================
 // 构建请求体（OpenAI 兼容格式，DashScope / DeepSeek 通用）
 // ============================================================
-function buildBody(messages, stream = false) {
+export function buildBody(messages, stream = false, systemPrompt = AI_CONFIG.systemPrompt) {
   return {
     model: AI_CONFIG.model,
     messages: [
-      { role: 'system', content: AI_CONFIG.systemPrompt },
+      { role: 'system', content: systemPrompt },
       ...messages
     ],
     max_tokens: AI_CONFIG.maxTokens,
@@ -161,7 +161,7 @@ function parseStreamChunk(parsed) {
 // ============================================================
 // 非流式请求（备用）
 // ============================================================
-export async function fetchAIResponse(messages) {
+export async function fetchAIResponse(messages, options = {}) {
   if (!isApiConfigured()) {
     throw new Error('AI 服务未配置，请在 src/services/aiService.js 中填入 apiUrl、apiKey 和 model')
   }
@@ -175,7 +175,7 @@ export async function fetchAIResponse(messages) {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${AI_CONFIG.apiKey}`
     },
-    body: JSON.stringify(buildBody(messages, false))
+    body: JSON.stringify(buildBody(messages, false, options.systemPrompt))
   })
 
   if (!response.ok) {
@@ -198,7 +198,7 @@ export async function fetchAIResponse(messages) {
 // ============================================================
 // 流式请求 — 返回 async iterator，逐块 yield delta 文本
 // ============================================================
-export async function fetchAIResponseStream(messages) {
+export async function fetchAIResponseStream(messages, options = {}) {
   if (!isApiConfigured()) {
     throw new Error('AI 服务未配置，请在 src/services/aiService.js 中填入 apiUrl、apiKey 和 model')
   }
@@ -212,7 +212,7 @@ export async function fetchAIResponseStream(messages) {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${AI_CONFIG.apiKey}`
     },
-    body: JSON.stringify(buildBody(messages, true))
+    body: JSON.stringify(buildBody(messages, true, options.systemPrompt))
   })
 
   if (!response.ok) {
