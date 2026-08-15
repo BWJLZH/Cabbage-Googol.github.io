@@ -38,3 +38,17 @@ describe('getMergedSchool 新字段合并', () => {
     expect(s.canteen_price).toBe('5-10元')
   })
 })
+
+describe('getSchoolImage', () => {
+  it('无上传图时返回 null（页面回落占位）', () => {
+    const store = useAdminDataStore()
+    expect(store.getSchoolImage('tsinghua-university')).toBeNull()
+  })
+  it('上传后返回 base64 图，删除后回落 null', () => {
+    const store = useAdminDataStore()
+    store.setSchoolImage('tsinghua-university', 'data:image/png;base64,AAA')
+    expect(store.getSchoolImage('tsinghua-university')).toBe('data:image/png;base64,AAA')
+    store.deleteSchoolImage('tsinghua-university')
+    expect(store.getSchoolImage('tsinghua-university')).toBeNull()
+  })
+})

@@ -79,7 +79,10 @@
           :key="s.slug"
           @click="$router.push('/school/' + s.slug)"
         >
-          <span class="fav-emoji" :style="{ background: s._bg }">{{ s._emoji }}</span>
+          <span class="fav-emoji" :style="{ background: s._bg }">
+            <img v-if="adminData.getSchoolImage(s.slug)" class="fav-img" :src="adminData.getSchoolImage(s.slug)" alt="" />
+            <template v-else>{{ s._emoji }}</template>
+          </span>
           <div class="fav-info">
             <span class="fav-name">{{ s.name }}</span>
             <span class="fav-meta">{{ s.city }} · {{ s.type }}</span>
@@ -265,6 +268,7 @@ import { useUserDataStore, PROVINCES, SUBJECT_OPTIONS, EXAM_TYPES } from '../sto
 import { SCHOOLS } from '../data/schools.js'
 import { loadLS } from '../utils/storage.js'
 import { buildBackup, validateBackup, restoreBackup } from '../utils/backup.js'
+import { useAdminDataStore } from '../stores/adminData.js'
 import { PhNotePencil, PhLock, PhPower, PhCamera, PhCaretRight, PhHeart, PhStar, PhMapPin, PhExam, PhPlus, PhX, PhGear, PhDownloadSimple } from '@phosphor-icons/vue'
 
 // ============================================================
@@ -272,6 +276,7 @@ import { PhNotePencil, PhLock, PhPower, PhCamera, PhCaretRight, PhHeart, PhStar,
 // ============================================================
 const authStore = useAuthStore()
 const userData = useUserDataStore()
+const adminData = useAdminDataStore()
 const router = useRouter()
 
 // ============================================================
@@ -293,7 +298,7 @@ onActivated(() => {
 
 const favList = ref(loadLS('cx-fav', []))
 const favSchools = computed(() =>
-  favList.value.map(sl => SCHOOLS.find(s => s.slug === sl)).filter(Boolean)
+  favList.value.map(sl => adminData.getMergedSchool(sl)).filter(Boolean)
 )
 
 // ============================================================
@@ -706,6 +711,13 @@ function confirmLogout() {
   justify-content: center;
   font-size: 18px;
   flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+}
+.fav-img {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
 }
 .fav-info {
   flex: 1;

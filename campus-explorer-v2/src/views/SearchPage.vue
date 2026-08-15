@@ -48,7 +48,8 @@
           @click="$router.push('/school/' + s.slug)"
         >
           <div class="r-img" :style="{ background: s._bg }">
-            <span class="r-emoji">{{ s._emoji }}</span>
+            <img v-if="adminData.getSchoolImage(s.slug)" class="r-img-photo" :src="adminData.getSchoolImage(s.slug)" alt="" />
+            <span v-else class="r-emoji">{{ s._emoji }}</span>
           </div>
           <div class="r-body">
             <div class="r-head">
@@ -75,14 +76,16 @@
 import { ref, watch, onMounted, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { SCHOOLS } from '../data/schools.js'
+import { useAdminDataStore } from '../stores/adminData.js'
 import { PhArrowLeft, PhMagnifyingGlass, PhX, PhStar } from '@phosphor-icons/vue'
 
 const route = useRoute()
+const adminData = useAdminDataStore()
 const q = ref('')
 const ft = ref('')
 const ff = ref('')
 const inp = ref(null)
-const results = ref([...SCHOOLS].sort((a, b) => b.scores.综合 - a.scores.综合))
+const results = ref(adminData.getAllMergedSchools().sort((a, b) => b.scores.综合 - a.scores.综合))
 
 const typeFilters = [
   { v: '985', l: '985' },
@@ -97,7 +100,7 @@ const facFilters = [
 ]
 
 function run() {
-  let list = [...SCHOOLS]
+  let list = adminData.getAllMergedSchools()
   const kw = q.value.trim()
   if (kw) {
     list = list.filter(s =>
@@ -188,6 +191,13 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+}
+.r-img-photo {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
 }
 
 .r-emoji {

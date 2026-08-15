@@ -15,7 +15,10 @@
         <div class="cmp-label"></div>
         <div class="cmp-col" v-for="s in list" :key="s.slug">
           <button class="rmv" @click="toggleComp(s.slug)"><PhX :size="12" /></button>
-          <span class="cmp-emoji">{{ s._emoji }}</span>
+          <span class="cmp-emoji">
+            <img v-if="adminData.getSchoolImage(s.slug)" class="cmp-img" :src="adminData.getSchoolImage(s.slug)" alt="" />
+            <template v-else>{{ s._emoji }}</template>
+          </span>
           <h3>{{ s.name }}</h3>
           <span class="cmp-type">{{ s.type }}</span>
         </div>
@@ -71,9 +74,11 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { SCHOOLS } from '../data/schools.js'
+import { useAdminDataStore } from '../stores/adminData.js'
 import { loadLS, saveLS } from '../utils/storage.js'
 import { PhX, PhCheck, PhArrowsLeftRight } from '@phosphor-icons/vue'
 
+const adminData = useAdminDataStore()
 const compareList = ref(loadLS('cx-cmp', []))
 
 const dims = ['宿舍', '食堂', '教学', '环境', '社交']
@@ -90,7 +95,7 @@ const dormRows = [
 ]
 
 const list = computed(() =>
-  compareList.value.map(sl => SCHOOLS.find(s => s.slug === sl)).filter(Boolean)
+  compareList.value.map(sl => adminData.getMergedSchool(sl)).filter(Boolean)
 )
 
 function isHL(s, dim) {
@@ -163,6 +168,13 @@ function clearCompare() {
 
 .cmp-emoji {
   font-size: 24px;
+}
+.cmp-img {
+  width: 40px; height: 40px;
+  border-radius: 8px;
+  object-fit: cover;
+  display: block;
+  margin: 0 auto;
 }
 
 .cmp-col h3 {

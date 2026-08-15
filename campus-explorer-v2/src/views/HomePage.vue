@@ -45,7 +45,8 @@
           :style="{ background: s._bg }"
         >
           <span class="cc-badge">{{ s.type }}</span>
-          <span class="cc-emoji">{{ s._emoji }}</span>
+          <img v-if="s.image" class="cc-img" :src="s.image" alt="" />
+          <span class="cc-emoji" v-if="!s.image">{{ s._emoji }}</span>
           <div class="cc-info">
             <h3>{{ s.name }}</h3>
             <p class="cc-loc">{{ s.city }} · {{ s.province }}</p>
@@ -97,7 +98,8 @@
         <template v-else>
           <div class="card" v-for="s in gridSchools" :key="s.slug" @click="$router.push('/school/' + s.slug)">
             <div class="card-img" :style="{ background: s._bg }">
-              <span class="card-emoji">{{ s._emoji }}</span>
+              <img v-if="s.image" class="card-img-photo" :src="s.image" alt="" />
+              <span class="card-emoji" v-if="!s.image">{{ s._emoji }}</span>
               <span class="card-type">{{ s.type }}</span>
             </div>
             <div class="card-body">
@@ -186,7 +188,10 @@ watch(activeType, () => {
 // ② 轮播 — 官方推荐院校（管理员主推）
 // ==========================================================
 const featuredSchools = computed(() =>
-  adminData.carousel.map(slug => SCHOOLS.find(s => s.slug === slug)).filter(Boolean)
+  adminData.carousel
+    .map(slug => adminData.getMergedSchool(slug))
+    .filter(Boolean)
+    .map(s => ({ ...s, image: adminData.getSchoolImage(s.slug) }))
 )
 
 const carouselRef = ref(null)
@@ -289,12 +294,15 @@ function updateCurrentFromScroll() {
 // ==========================================================
 const gridSchools = computed(() => {
   const carouselSlugs = new Set(adminData.carousel)
-  let list = SCHOOLS.filter(s => !carouselSlugs.has(s.slug))
+  let list = adminData.getAllMergedSchools().filter(s => !carouselSlugs.has(s.slug))
   if (activeType.value) {
     list = list.filter(s => s.type === activeType.value)
   }
   // 按综合评分降序
-  return [...list].sort((a, b) => b.scores.综合 - a.scores.综合).slice(0, 12)
+  return [...list]
+    .sort((a, b) => b.scores.综合 - a.scores.综合)
+    .slice(0, 12)
+    .map(s => ({ ...s, image: adminData.getSchoolImage(s.slug) }))
 })
 
 const newsItems = computed(() => adminData.news)
@@ -430,6 +438,11 @@ onUnmounted(() => {
   font-size: 56px; opacity: .22;
   line-height: 1;
 }
+.cc-img {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+}
 .cc-info {
   position: relative; z-index: 1;
 }
@@ -504,6 +517,11 @@ onUnmounted(() => {
   position: relative;
 }
 .card-emoji { font-size: 40px; opacity: .6; }
+.card-img-photo {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+}
 .card-type {
   position: absolute; top: 8px; left: 8px;
   padding: 2px 8px;

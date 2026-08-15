@@ -98,6 +98,11 @@ export const useAdminDataStore = defineStore('adminData', () => {
     saveObj(IMAGES_KEY, schoolImages.value)
   }
 
+  // 学校主图：管理员上传图优先；无上传图返回 null，页面回落 _bg+_emoji 占位
+  function getSchoolImage(slug) {
+    return schoolImages.value[slug] || null
+  }
+
   // ==========================================================
   // 学校数据覆盖
   // ==========================================================
@@ -167,6 +172,7 @@ export const useAdminDataStore = defineStore('adminData', () => {
     deleteNews,
     setSchoolImage,
     deleteSchoolImage,
+    getSchoolImage,
     setSchoolOverride,
     getMergedSchool,
     getAllMergedSchools

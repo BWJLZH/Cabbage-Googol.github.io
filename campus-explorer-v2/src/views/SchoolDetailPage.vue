@@ -2,7 +2,8 @@
   <div class="page detail-page" v-if="s">
     <!-- Cover -->
     <div class="cover" :style="{ background: s._bg }">
-      <span class="cover-emoji">{{ s._emoji }}</span>
+      <img v-if="schoolImage" class="cover-img" :src="schoolImage" alt="" />
+      <span class="cover-emoji" v-if="!schoolImage">{{ s._emoji }}</span>
       <button class="cover-back" @click="$router.back()">
         <span><PhArrowLeft :size="18" /></span>
       </button>
@@ -316,6 +317,7 @@ const compareList = ref(loadLS('cx-cmp', []))
 const userReviews = ref(loadLS('cx-rev', []))
 
 const s = computed(() => adminData.getMergedSchool(route.params.slug))
+const schoolImage = computed(() => adminData.getSchoolImage(route.params.slug))
 const isFav = computed(() => favorites.value.includes(route.params.slug))
 const isComp = computed(() => compareList.value.includes(route.params.slug))
 
@@ -650,6 +652,12 @@ onDeactivated(() => {
 .cover-emoji {
   font-size: 64px;
   opacity: .4;
+}
+
+.cover-img {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
 }
 
 .cover-back {
