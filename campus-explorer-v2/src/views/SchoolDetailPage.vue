@@ -753,7 +753,12 @@ onDeactivated(() => {
   gap: 16px;
   overflow-x: auto;
   padding-bottom: 4px;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+  scroll-snap-type: x proximity;
 }
+.score-row::-webkit-scrollbar { display: none; }
 
 .score-item {
   display: flex;
@@ -767,6 +772,7 @@ onDeactivated(() => {
   box-shadow: var(--shadow);
   min-width: 80px;
   position: relative;
+  scroll-snap-align: start;
 }
 
 .s-svg {
