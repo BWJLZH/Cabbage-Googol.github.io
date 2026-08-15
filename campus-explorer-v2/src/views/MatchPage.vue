@@ -103,6 +103,7 @@
           <div class="mc-body">
             <h3>{{ r.name }}</h3>
             <p>{{ r.city }} · {{ r.type }}</p>
+            <p class="mc-line">参考线 {{ r.line }} 分 · 线差 {{ r.diff > 0 ? '+' : '' }}{{ r.diff }}</p>
             <p class="mc-reason">{{ r.reason }}</p>
           </div>
           <span class="mc-tier" :class="'mc-' + tier">{{ tier }}</span>
@@ -124,6 +125,8 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { SCHOOLS } from '../data/schools.js'
 import { loadLS, saveLS } from '../utils/storage.js'
+import { PROVINCES } from '../stores/userData.js'
+import { matchSchools } from '../utils/matchAlgorithm.js'
 import { PhCheck, PhArrowRight, PhArrowLeft, PhDiamond, PhHouse, PhDot, PhStar } from '@phosphor-icons/vue'
 
 const router = useRouter()
@@ -136,7 +139,7 @@ const priority = ref('comprehensive')
 const results = ref([])
 const compareList = ref(loadLS('cx-cmp', []))
 
-const provs = ['北京', '上海', '广东', '浙江', '江苏', '湖北', '四川', '陕西', '山东', '河南', '湖南', '福建']
+const provs = PROVINCES
 const hotCities = ['北京', '上海', '广州', '深圳', '杭州', '南京', '成都', '武汉', '西安']
 const prefs = [
   { v: 'comprehensive', icon: PhDiamond, l: '综合推荐', d: '平衡各项指标' },
@@ -152,50 +155,12 @@ function toggleCity(c) {
 }
 
 function runMatch() {
-  const all = [...SCHOOLS].map(s => {
-    let sc = 0
-    if (s.type === '985') sc += 30
-    else if (s.type === '211') sc += 20
-    else if (s.type === '双一流') sc += 15
-    else sc += 5
-    if (cities.value.includes(s.city)) sc += 20
-    if (priority.value === 'dormitory') {
-      sc += (s.scores.宿舍 || 3) * 3
-    } else if (priority.value === 'city') {
-      if (['北京', '上海', '广州', '深圳', '杭州'].includes(s.city)) sc += 25
-    } else if (priority.value === 'prestige') {
-      if (s.type === '985') sc += 20
-    } else {
-      sc += (s.scores.综合 || 3) * 4
-    }
-    sc += (s.scores.综合 || 3) * 3
-    return { ...s, _ms: sc }
+  results.value = matchSchools(SCHOOLS, {
+    score: score.value,
+    province: province.value,
+    cities: cities.value,
+    priority: priority.value
   })
-  all.sort((a, b) => b._ms - a._ms)
-
-  const res = []
-  all.slice(0, 3).forEach(s => {
-    res.push({
-      slug: s.slug, name: s.name, city: s.city, type: s.type,
-      _emoji: s._emoji, tier: '冲刺',
-      reason: s.profile?.slice(0, 30) + '...'
-    })
-  })
-  all.slice(3, 7).forEach(s => {
-    res.push({
-      slug: s.slug, name: s.name, city: s.city, type: s.type,
-      _emoji: s._emoji, tier: '稳妥',
-      reason: s.profile?.slice(0, 30) + '...'
-    })
-  })
-  all.slice(7, 11).forEach(s => {
-    res.push({
-      slug: s.slug, name: s.name, city: s.city, type: s.type,
-      _emoji: s._emoji, tier: '保底',
-      reason: s.profile?.slice(0, 30) + '...'
-    })
-  })
-  results.value = res
   step.value = 3
 }
 
@@ -470,6 +435,12 @@ function goCompare() {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.mc-line {
+  font-size: 11px;
+  color: var(--accent2);
+  font-weight: 500;
 }
 
 .mc-tier {

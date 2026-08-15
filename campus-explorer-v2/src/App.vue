@@ -16,6 +16,12 @@
         <span class="nav-label">首页</span>
       </router-link>
 
+      <!-- 匹配 -->
+      <router-link to="/match" class="nav-item" :class="{ active: $route.path === '/match' }" replace>
+        <span class="nav-icon"><PhSparkle :size="20" /></span>
+        <span class="nav-label">匹配</span>
+      </router-link>
+
       <!-- 对比 — 含数量角标 -->
       <router-link to="/compare" class="nav-item" :class="{ active: $route.path === '/compare' }" replace>
         <span class="nav-icon"><PhArrowsLeftRight :size="20" /></span>
@@ -52,7 +58,7 @@ import { useRoute } from 'vue-router'
 import { loadLS } from './utils/storage.js'
 import { useAuthStore } from './stores/auth.js'
 import AiFloatingBall from './components/AiFloatingBall.vue'
-import { PhHouse, PhArrowsLeftRight, PhUsersThree, PhUserCircle } from '@phosphor-icons/vue'
+import { PhHouse, PhSparkle, PhArrowsLeftRight, PhUsersThree, PhUserCircle } from '@phosphor-icons/vue'
 
 const route = useRoute()
 const authStore = useAuthStore()

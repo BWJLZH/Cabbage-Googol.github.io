@@ -31,7 +31,8 @@ const routes = [
   {
     path: '/match',
     name: 'match',
-    component: () => import('../views/MatchPage.vue')
+    component: () => import('../views/MatchPage.vue'),
+    meta: { tab: true }
   },
   {
     path: '/community',
