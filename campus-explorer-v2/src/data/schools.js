@@ -3,6 +3,7 @@ export const SCHOOLS = [
   {
     slug: "tsinghua-university", name: "清华大学", type: "985", province: "北京", city: "北京",
     lat: 40.0075, lng: 116.317,
+    admit_line: 690,
     tags: ["空调宿舍", "地铁站", "985", "211", "双一流", "独立卫浴", "上床下桌"],
     _bg: "#E8E0D5", _emoji: "🏛",
     scores: { 综合: 4.6, 宿舍: 4.2, 食堂: 4.5, 教学: 4.8, 环境: 4.3, 社交: 3.9 },
@@ -22,6 +23,7 @@ export const SCHOOLS = [
   {
     slug: "peking-university", name: "北京大学", type: "985", province: "北京", city: "北京",
     lat: 39.9869, lng: 116.3059,
+    admit_line: 688,
     tags: ["空调宿舍", "地铁站", "985", "211", "双一流", "独立卫浴"],
     _bg: "#D5E0E0", _emoji: "🏫",
     scores: { 综合: 4.5, 宿舍: 4.0, 食堂: 4.3, 教学: 4.7, 环境: 4.5, 社交: 4.1 },
@@ -37,6 +39,7 @@ export const SCHOOLS = [
   {
     slug: "zhejiang-university", name: "浙江大学", type: "985", province: "浙江", city: "杭州",
     lat: 30.2637, lng: 120.1236,
+    admit_line: 672,
     tags: ["空调宿舍", "独卫", "985", "211", "双一流", "上床下桌", "杭州"],
     _bg: "#D5E5D5", _emoji: "🏯",
     scores: { 综合: 4.4, 宿舍: 4.4, 食堂: 4.3, 教学: 4.5, 环境: 4.6, 社交: 4.2 },
@@ -52,6 +55,7 @@ export const SCHOOLS = [
   {
     slug: "wuhan-university", name: "武汉大学", type: "985", province: "湖北", city: "武汉",
     lat: 30.5377, lng: 114.3596,
+    admit_line: 638,
     tags: ["985", "211", "双一流", "最美校园", "樱花", "空调宿舍", "独卫"],
     _bg: "#E8D5DF", _emoji: "🌸",
     scores: { 综合: 4.3, 宿舍: 3.8, 食堂: 4.0, 教学: 4.4, 环境: 4.9, 社交: 4.3 },
@@ -67,6 +71,7 @@ export const SCHOOLS = [
   {
     slug: "shenzhen-university", name: "深圳大学", type: "普通本科", province: "广东", city: "深圳",
     lat: 22.5309, lng: 113.9386,
+    admit_line: 575,
     tags: ["空调宿舍", "独卫", "上床下桌", "一线城市", "就业强", "网红食堂"],
     _bg: "#D5E0EB", _emoji: "🌆",
     scores: { 综合: 4.2, 宿舍: 4.5, 食堂: 4.4, 教学: 3.9, 环境: 4.3, 社交: 4.4 },
@@ -82,6 +87,7 @@ export const SCHOOLS = [
   {
     slug: "fudan-university", name: "复旦大学", type: "985", province: "上海", city: "上海",
     lat: 31.2989, lng: 121.4997,
+    admit_line: 677,
     tags: ["985", "211", "双一流", "上海", "独立卫浴", "空调宿舍"],
     _bg: "#D5D8E8", _emoji: "📚",
     scores: { 综合: 4.5, 宿舍: 3.8, 食堂: 4.1, 教学: 4.7, 环境: 4.2, 社交: 4.0 },
@@ -97,6 +103,7 @@ export const SCHOOLS = [
   {
     slug: "sichuan-university", name: "四川大学", type: "985", province: "四川", city: "成都",
     lat: 30.6352, lng: 104.0825,
+    admit_line: 632,
     tags: ["985", "211", "双一流", "成都", "美食之都", "空调宿舍"],
     _bg: "#E8DDD5", _emoji: "🐼",
     scores: { 综合: 4.1, 宿舍: 3.9, 食堂: 4.5, 教学: 4.3, 环境: 4.1, 社交: 4.5 },
@@ -112,6 +119,7 @@ export const SCHOOLS = [
   {
     slug: "sun-yat-sen-university", name: "中山大学", type: "985", province: "广东", city: "广州",
     lat: 23.0985, lng: 113.2939,
+    admit_line: 645,
     tags: ["985", "211", "双一流", "广州", "空调宿舍", "独立卫浴"],
     _bg: "#D5E0D8", _emoji: "🌴",
     scores: { 综合: 4.3, 宿舍: 4.1, 食堂: 4.2, 教学: 4.4, 环境: 4.4, 社交: 4.1 },
@@ -127,6 +135,7 @@ export const SCHOOLS = [
   {
     slug: "nanjing-university", name: "南京大学", type: "985", province: "江苏", city: "南京",
     lat: 32.1182, lng: 118.9567,
+    admit_line: 666,
     tags: ["985", "211", "双一流", "南京", "空调宿舍", "独立卫浴", "上床下桌"],
     _bg: "#D8D5E8", _emoji: "🔭",
     scores: { 综合: 4.4, 宿舍: 4.2, 食堂: 4.0, 教学: 4.6, 环境: 4.3, 社交: 3.8 },
@@ -142,6 +151,7 @@ export const SCHOOLS = [
   {
     slug: "xidian-university", name: "西安电子科技大学", type: "211", province: "陕西", city: "西安",
     lat: 34.1234, lng: 108.8369,
+    admit_line: 610,
     tags: ["211", "双一流", "IT强校", "西安", "空调宿舍"],
     _bg: "#E8E0D0", _emoji: "📡",
     scores: { 综合: 3.9, 宿舍: 4.0, 食堂: 3.7, 教学: 4.2, 环境: 3.8, 社交: 3.6 },
@@ -155,3 +165,15 @@ export const SCHOOLS = [
     reviews: [{ id: "r12", source: "用户原创", content: "西电虽然综合排名不算顶尖，但在IT行业的认可度很高。每年去华为、中兴、BAT的特别多。", rating: { 综合: 4, 宿舍: 4, 食堂: 3, 教学: 4, 环境: 3, 社交: 3 }, author: "西电学长", helpful: 16, created_at: "2026-05-28" }]
   }
 ]
+
+// ============ 模拟数据：2025 参考录取线省份调整值 ============
+// 正值 = 该省竞争激烈，录取线高于全国参考值；负值 = 低于。
+// 仅用于演示分档逻辑，填报请以官方数据为准。
+export const PROVINCE_OFFSETS = {
+  河南: 10, 山东: 8, 河北: 8, 江西: 7, 安徽: 7,
+  广东: 6, 四川: 6, 湖南: 6, 广西: 5, 云南: 5,
+  贵州: 5, 山西: 5, 湖北: 3, 江苏: 3, 浙江: 3,
+  福建: 3, 重庆: 2, 陕西: 2, 甘肃: 1, 海南: 0,
+  辽宁: -2, 吉林: -2, 黑龙江: -2, 内蒙古: -2, 北京: -5,
+  天津: -5, 新疆: -6, 上海: -8, 宁夏: -8, 青海: -10, 西藏: -10
+}
