@@ -12,6 +12,7 @@
         <span class="avatar-badge"><PhCamera :size="14" /></span>
       </div>
       <input ref="avatarInput" type="file" accept="image/*" style="display:none" @change="onAvatarSelected" />
+      <input ref="backupInput" type="file" accept=".json,application/json" style="display:none" @change="onImportFile" />
       <h2 class="profile-nickname">{{ authStore.currentUser.nickname || authStore.currentUser.username }}</h2>
       <p class="profile-username">@{{ authStore.currentUser.username }}</p>
       <span class="role-badge" :class="'role-' + authStore.currentUser.role">
@@ -103,6 +104,11 @@
         <span class="menu-label">修改密码</span>
         <span class="menu-arrow"><PhCaretRight :size="16" /></span>
       </button>
+      <button class="menu-item" @click="showBackupModal = true">
+        <span class="menu-icon"><PhDownloadSimple :size="18" /></span>
+        <span class="menu-label">数据备份</span>
+        <span class="menu-arrow"><PhCaretRight :size="16" /></span>
+      </button>
       <button v-if="authStore.isAdmin" class="menu-item" @click="$router.push('/admin')">
         <span class="menu-icon"><PhGear :size="18" /></span>
         <span class="menu-label">管理后台</span>
@@ -177,6 +183,34 @@
     </div>
 
     <!-- ========================================================
+         数据备份弹窗
+         ======================================================== -->
+    <div class="modal-mask" v-if="showBackupModal" @click.self="showBackupModal = false">
+      <div class="modal">
+        <h3>数据备份</h3>
+        <p class="backup-desc">备份仅包含个人数据（生源地/选科/成绩/收藏/对比/评价），不含账号密码。导入将覆盖现有数据。</p>
+        <div class="modal-acts">
+          <button @click="exportBackup">导出数据</button>
+          <button class="sbm" @click="triggerImport">导入数据</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================================
+         导入确认弹窗
+         ======================================================== -->
+    <div class="modal-mask" v-if="showImportConfirm" @click.self="showImportConfirm = false">
+      <div class="modal confirm-modal">
+        <h3>导入数据</h3>
+        <p class="confirm-text">导入将覆盖现有数据，确定继续？</p>
+        <div class="confirm-acts">
+          <button class="clr-btn" @click="showImportConfirm = false">取消</button>
+          <button class="sbm" @click="confirmImport">确定导入</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================================
          退出登录确认弹窗
          ======================================================== -->
     <div class="modal-mask" v-if="showLogoutConfirm" @click.self="showLogoutConfirm = false">
@@ -230,7 +264,8 @@ import { useAuthStore } from '../stores/auth.js'
 import { useUserDataStore, PROVINCES, SUBJECT_OPTIONS, EXAM_TYPES } from '../stores/userData.js'
 import { SCHOOLS } from '../data/schools.js'
 import { loadLS } from '../utils/storage.js'
-import { PhNotePencil, PhLock, PhPower, PhCamera, PhCaretRight, PhHeart, PhStar, PhMapPin, PhExam, PhPlus, PhX, PhGear } from '@phosphor-icons/vue'
+import { buildBackup, validateBackup, restoreBackup } from '../utils/backup.js'
+import { PhNotePencil, PhLock, PhPower, PhCamera, PhCaretRight, PhHeart, PhStar, PhMapPin, PhExam, PhPlus, PhX, PhGear, PhDownloadSimple } from '@phosphor-icons/vue'
 
 // ============================================================
 // Stores
@@ -251,6 +286,8 @@ onActivated(() => {
   showLogoutConfirm.value = false
   showNicknameModal.value = false
   showPasswordModal.value = false
+  showBackupModal.value = false
+  showImportConfirm.value = false
   favList.value = loadLS('cx-fav', [])
 })
 
@@ -421,6 +458,58 @@ async function handleChangePassword() {
   } finally {
     passwordForm.loading = false
   }
+}
+
+// ============================================================
+// 数据备份（导出/导入）
+// ============================================================
+const showBackupModal = ref(false)
+const showImportConfirm = ref(false)
+const pendingBackup = ref(null)
+const backupInput = ref(null)
+
+function exportBackup() {
+  const backup = buildBackup()
+  const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `校园搜备份-${new Date().toISOString().split('T')[0]}.json`
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+}
+
+function triggerImport() {
+  backupInput.value?.click()
+}
+
+function onImportFile(event) {
+  const file = event.target.files?.[0]
+  event.target.value = ''
+  if (!file) return
+  const reader = new FileReader()
+  reader.onload = () => {
+    try {
+      const obj = JSON.parse(reader.result)
+      if (!validateBackup(obj)) {
+        alert('备份文件格式不正确')
+        return
+      }
+      pendingBackup.value = obj
+      showBackupModal.value = false
+      showImportConfirm.value = true
+    } catch {
+      alert('备份文件格式不正确')
+    }
+  }
+  reader.readAsText(file)
+}
+
+function confirmImport() {
+  restoreBackup(pendingBackup.value)
+  location.reload()
 }
 
 // ============================================================
@@ -726,6 +815,7 @@ function confirmLogout() {
 /* ====== 退出确认弹窗 ====== */
 .confirm-modal { text-align: center; }
 .confirm-text { font-size: 15px; color: var(--text2); margin: 12px 0 24px; line-height: 1.6; }
+.backup-desc { font-size: 14px; color: var(--text2); line-height: 1.6; margin: 12px 0 24px; }
 .confirm-acts { display: flex; gap: 12px; justify-content: center; }
 .confirm-acts .clr-btn { padding: 10px 28px; }
 .confirm-acts .sbm { padding: 10px 28px; background: var(--text); color: var(--bg); border-radius: var(--radius-full); font-size: 14px; font-weight: 600; }
