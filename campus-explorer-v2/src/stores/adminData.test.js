@@ -39,16 +39,38 @@ describe('getMergedSchool 新字段合并', () => {
   })
 })
 
-describe('getSchoolImage', () => {
-  it('无上传图时返回 null（页面回落占位）', () => {
+describe('校园图片相册', () => {
+  it('无上传图时主图与相册均为空', () => {
     const store = useAdminDataStore()
+    expect(store.getSchoolGallery('tsinghua-university')).toEqual([])
     expect(store.getSchoolImage('tsinghua-university')).toBeNull()
   })
-  it('上传后返回 base64 图，删除后回落 null', () => {
+  it('上传多张：第一张为主图', () => {
     const store = useAdminDataStore()
     store.setSchoolImage('tsinghua-university', 'data:image/png;base64,AAA')
+    store.setSchoolImage('tsinghua-university', 'data:image/png;base64,BBB')
+    expect(store.getSchoolGallery('tsinghua-university')).toHaveLength(2)
     expect(store.getSchoolImage('tsinghua-university')).toBe('data:image/png;base64,AAA')
-    store.deleteSchoolImage('tsinghua-university')
+  })
+  it('设为主图：移动后主图切换', () => {
+    const store = useAdminDataStore()
+    store.setSchoolImage('tsinghua-university', 'AAA')
+    store.setSchoolImage('tsinghua-university', 'BBB')
+    store.setMainSchoolImage('tsinghua-university', 1)
+    expect(store.getSchoolImage('tsinghua-university')).toBe('BBB')
+  })
+  it('删除指定张，删空后回落 null', () => {
+    const store = useAdminDataStore()
+    store.setSchoolImage('tsinghua-university', 'AAA')
+    store.setSchoolImage('tsinghua-university', 'BBB')
+    store.deleteSchoolImage('tsinghua-university', 0)
+    expect(store.getSchoolImage('tsinghua-university')).toBe('BBB')
+    store.deleteSchoolImage('tsinghua-university', 0)
     expect(store.getSchoolImage('tsinghua-university')).toBeNull()
+  })
+  it('兼容旧格式：单张字符串归一为数组', () => {
+    globalThis.localStorage.setItem('cx-school-images', JSON.stringify({ 'peking-university': 'data:old' }))
+    const store = useAdminDataStore()
+    expect(store.getSchoolGallery('peking-university')).toEqual(['data:old'])
   })
 })

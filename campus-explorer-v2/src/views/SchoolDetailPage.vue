@@ -115,13 +115,25 @@
       </div>
     </div>
 
+    <!-- Campus Gallery -->
+    <div class="sec">
+      <h3 class="sl">校园环境 <span class="sl-sub">{{ gallery.length }} 张</span></h3>
+      <div class="gallery-scroll" v-if="gallery.length">
+        <div class="gallery-item" v-for="(img, i) in gallery" :key="i" @click="openPreview(i)">
+          <img :src="img" alt="" loading="lazy" />
+        </div>
+      </div>
+      <div class="empty" v-else><p>暂无校园实景图片，敬请期待</p></div>
+    </div>
+
     <!-- Videos -->
-    <div class="sec" v-if="videos.length">
+    <div class="sec">
       <h3 class="sl">校园视频 <span class="sl-sub">{{ videos.length }} 个</span></h3>
       <div class="video-card" v-for="v in videos" :key="v.id">
         <video :src="v.url" controls preload="metadata"></video>
         <p class="video-title">{{ v.title }}</p>
       </div>
+      <div class="empty" v-if="!videos.length"><p>暂无校园视频，敬请期待</p></div>
     </div>
 
     <!-- Tags -->
@@ -288,6 +300,14 @@
       </div>
     </div>
 
+    <!-- 图片全屏预览 -->
+    <div class="modal-mask photo-mask" v-if="previewIndex >= 0" @click.self="previewIndex = -1">
+      <div class="photo-box">
+        <img :src="gallery[previewIndex]" alt="" />
+        <button class="photo-close" @click="previewIndex = -1"><PhX :size="18" /></button>
+      </div>
+    </div>
+
     <!-- Toast 提示 -->
     <transition name="toast">
       <div class="review-toast" v-if="toastMessage">{{ toastMessage }}</div>
@@ -318,6 +338,12 @@ const userReviews = ref(loadLS('cx-rev', []))
 
 const s = computed(() => adminData.getMergedSchool(route.params.slug))
 const schoolImage = computed(() => adminData.getSchoolImage(route.params.slug))
+const gallery = computed(() => adminData.getSchoolGallery(route.params.slug))
+const previewIndex = ref(-1)
+
+function openPreview(i) {
+  previewIndex.value = i
+}
 const isFav = computed(() => favorites.value.includes(route.params.slug))
 const isComp = computed(() => compareList.value.includes(route.params.slug))
 
@@ -1297,4 +1323,53 @@ onDeactivated(() => {
 }
 .video-card video { width: 100%; display: block; aspect-ratio: 16/9; background: #000; }
 .video-title { padding: 12px 16px; font-size: 14px; font-weight: 500; color: var(--text); }
+
+/* ====== 校园环境相册 ====== */
+.gallery-scroll {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+  scroll-snap-type: x proximity;
+}
+.gallery-scroll::-webkit-scrollbar { display: none; }
+.gallery-item {
+  flex-shrink: 0;
+  width: 150px;
+  height: 105px;
+  border-radius: 10px;
+  overflow: hidden;
+  cursor: pointer;
+  scroll-snap-align: start;
+  border: 1px solid var(--bdr);
+}
+.gallery-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.gallery-item:active { transform: scale(.97); }
+
+/* ====== 全屏预览 ====== */
+.photo-mask {
+  display: flex; align-items: center; justify-content: center;
+  z-index: 500;
+}
+.photo-box {
+  position: relative;
+  max-width: 92vw;
+  max-height: 85vh;
+}
+.photo-box img {
+  max-width: 92vw;
+  max-height: 85vh;
+  border-radius: 12px;
+  display: block;
+}
+.photo-close {
+  position: absolute; top: -14px; right: -14px;
+  width: 32px; height: 32px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--text); color: var(--bg);
+  border-radius: 50%;
+}
 </style>

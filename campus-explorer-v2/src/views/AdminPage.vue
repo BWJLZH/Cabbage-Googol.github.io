@@ -173,18 +173,28 @@
          ============================================================ -->
     <div class="sec" v-if="tab === 'images'">
       <h3 class="sl">校园图片管理</h3>
+      <p class="muted">每校可上传多张图片，第一张为主图（首页/详情页封面显示）</p>
       <div class="img-grid">
         <div class="img-item" v-for="s in SCHOOLS" :key="s.slug">
-          <div class="img-preview" :style="{ background: adminData.schoolImages[s.slug] ? 'none' : s._bg }">
-            <img v-if="adminData.schoolImages[s.slug]" :src="adminData.schoolImages[s.slug]" alt="" />
+          <div class="img-preview" :style="{ background: adminData.getSchoolImage(s.slug) ? 'none' : s._bg }">
+            <img v-if="adminData.getSchoolImage(s.slug)" :src="adminData.getSchoolImage(s.slug)" alt="" />
             <span v-else class="img-emoji">{{ s._emoji }}</span>
           </div>
           <span class="img-name">{{ s.name }}</span>
+
+          <div class="gal-thumbs" v-if="adminData.getSchoolGallery(s.slug).length">
+            <div class="gal-thumb" v-for="(img, i) in adminData.getSchoolGallery(s.slug)" :key="i">
+              <img :src="img" alt="" />
+              <span v-if="i === 0" class="gal-main-tag">主图</span>
+              <button v-else class="gal-move" title="设为主图" @click="adminData.setMainSchoolImage(s.slug, i)">设主图</button>
+              <button class="gal-del" title="移除" @click="adminData.deleteSchoolImage(s.slug, i)"><PhX :size="12" /></button>
+            </div>
+          </div>
+
           <label class="img-upload">
-            <PhCamera :size="14" /> {{ adminData.schoolImages[s.slug] ? '更换' : '上传' }}
+            <PhCamera :size="14" /> {{ adminData.getSchoolGallery(s.slug).length ? '添加图片' : '上传图片' }}
             <input type="file" accept="image/*" style="display:none" @change="e => onUploadImage(s.slug, e)" />
           </label>
-          <button v-if="adminData.schoolImages[s.slug]" class="img-del" @click="adminData.deleteSchoolImage(s.slug)">移除</button>
         </div>
       </div>
     </div>
@@ -512,8 +522,29 @@ function fmtTime(ts) {
 .img-preview img { width: 100%; height: 100%; object-fit: cover; }
 .img-emoji { font-size: 28px; opacity: .5; }
 .img-name { font-size: 13px; font-weight: 500; display: block; margin-bottom: 4px; }
-.img-upload { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: var(--radius-full); font-size: 11px; color: var(--accent2); background: rgba(184,115,81,.06); cursor: pointer; }
+.img-upload { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: var(--radius-full); font-size: 11px; color: var(--accent2); background: rgba(184,115,81,.06); cursor: pointer; margin-top: 6px; }
 .img-del { display: block; margin: 4px auto 0; font-size: 11px; color: var(--warn); }
+
+/* ====== GALLERY THUMBS (ADMIN) ====== */
+.gal-thumbs { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; justify-content: center; }
+.gal-thumb { position: relative; width: 56px; height: 56px; border-radius: 6px; overflow: hidden; }
+.gal-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.gal-main-tag {
+  position: absolute; left: 0; top: 0;
+  padding: 1px 5px; background: var(--accent2); color: #fff;
+  font-size: 9px; border-radius: 0 0 6px 0;
+}
+.gal-move {
+  position: absolute; right: 0; top: 0;
+  padding: 1px 4px; background: rgba(26,26,46,.7); color: #fff;
+  font-size: 9px; border-radius: 0 0 0 6px; cursor: pointer;
+}
+.gal-del {
+  position: absolute; right: 0; bottom: 0;
+  width: 18px; height: 18px; display: flex; align-items: center; justify-content: center;
+  background: rgba(196,112,98,.85); color: #fff;
+  font-size: 10px; border-radius: 6px 0 0 0; cursor: pointer;
+}
 
 /* ====== VIDEOS ====== */
 .v-item {

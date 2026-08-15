@@ -86,21 +86,47 @@ export const useAdminDataStore = defineStore('adminData', () => {
   }
 
   // ==========================================================
-  // 校园图片
+  // 校园图片相册 — 每校多图，第一张为主图
+  // 兼容旧数据：旧格式为单张 base64 字符串，读取时自动归一为数组
   // ==========================================================
-  function setSchoolImage(slug, base64) {
-    schoolImages.value[slug] = base64
-    saveObj(IMAGES_KEY, schoolImages.value)
+  function getSchoolGallery(slug) {
+    const v = schoolImages.value[slug]
+    if (Array.isArray(v)) return v
+    return v ? [v] : []
   }
 
-  function deleteSchoolImage(slug) {
-    delete schoolImages.value[slug]
-    saveObj(IMAGES_KEY, schoolImages.value)
-  }
-
-  // 学校主图：管理员上传图优先；无上传图返回 null，页面回落 _bg+_emoji 占位
+  // 学校主图：相册第一张；无图返回 null，页面回落 _bg+_emoji 占位
   function getSchoolImage(slug) {
-    return schoolImages.value[slug] || null
+    const g = getSchoolGallery(slug)
+    return g[0] || null
+  }
+
+  function setSchoolImage(slug, base64) {
+    const g = getSchoolGallery(slug)
+    g.push(base64)
+    schoolImages.value[slug] = g
+    saveObj(IMAGES_KEY, schoolImages.value)
+  }
+
+  function deleteSchoolImage(slug, index) {
+    const g = getSchoolGallery(slug)
+    g.splice(index, 1)
+    if (g.length) {
+      schoolImages.value[slug] = g
+    } else {
+      delete schoolImages.value[slug]
+    }
+    saveObj(IMAGES_KEY, schoolImages.value)
+  }
+
+  // 将第 index 张设为主图（移到第一位）
+  function setMainSchoolImage(slug, index) {
+    const g = getSchoolGallery(slug)
+    if (index <= 0 || index >= g.length) return
+    const [img] = g.splice(index, 1)
+    g.unshift(img)
+    schoolImages.value[slug] = g
+    saveObj(IMAGES_KEY, schoolImages.value)
   }
 
   // ==========================================================
@@ -170,8 +196,10 @@ export const useAdminDataStore = defineStore('adminData', () => {
     addNews,
     updateNews,
     deleteNews,
+    getSchoolGallery,
     setSchoolImage,
     deleteSchoolImage,
+    setMainSchoolImage,
     getSchoolImage,
     setSchoolOverride,
     getMergedSchool,
