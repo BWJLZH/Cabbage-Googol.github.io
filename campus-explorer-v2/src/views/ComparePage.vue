@@ -72,7 +72,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onActivated } from 'vue'
 import { SCHOOLS } from '../data/schools.js'
 import { useAdminDataStore } from '../stores/adminData.js'
 import { loadLS, saveLS } from '../utils/storage.js'
@@ -80,6 +80,12 @@ import { PhX, PhCheck, PhArrowsLeftRight } from '@phosphor-icons/vue'
 
 const adminData = useAdminDataStore()
 const compareList = ref(loadLS('cx-cmp', []))
+
+// 每次激活页面时刷新对比列表（keep-alive 缓存下 setup 只跑一次，
+// 详情页/匹配页写入 cx-cmp 后需在激活时重读，否则显示陈旧数据）
+onActivated(() => {
+  compareList.value = loadLS('cx-cmp', [])
+})
 
 const dims = ['宿舍', '食堂', '教学', '环境', '社交']
 const dormRows = [
