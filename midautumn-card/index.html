@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#140f2e">
+<title>中秋 · 桂影月华</title>
+<meta name="description" content="新国潮中秋页面：紫蓝水墨远山与金黄满月为底，磨砂玻璃祝福卡片，点月亮切换卡片、点任意处绽放中秋粒子。">
+<link rel="preload" as="image" href="hero.jpg">
+
+<!--
+  ============================================================
+  中秋 · 毛玻璃卡片版（新国潮）
+  ============================================================
+  页面逻辑：
+    1. 初始即完整国风背景 + 居中磨砂玻璃卡片（祝福语 + 名字位）
+    2. 点击【月亮区域】→ 卡片平滑淡入 / 淡出
+    3. 点击【页面任意位置】→ 该处绽放中秋粒子（月饼 / 玉兔 / 桂花 / 星光），
+       向外飘散后消失。按规格不写任何提示文字。
+    4. 磨砂玻璃、文字微光、紫蓝 + 暖金、手机优先
+
+  几个刻意的技术决定：
+  - 背景图为 664×1439 竖版。宽屏若用 cover 铺满会裁掉约 74% 的画面，
+    所以统一 contain 完整呈现，两侧留白用同一张图模糊放大填掉。
+  - 月亮的可点击区域不是写死坐标，而是每帧按「图片实际绘制区」换算出来，
+    这样竖屏铺满、宽屏居中两种情况下都落在月亮上。
+  - 粒子画在卡片【上方】的 canvas 上（canvas 设 pointer-events:none 不挡点击），
+    否则在卡片上点击时粒子会被卡片盖住看不见。
+  - 粒子用 emoji，由 ctx.fillText 绘制。这是规格明确要求的，
+    因此这里是 emoji 规则的例外（其余地方仍不使用 emoji）。
+
+  要改文案：搜「▼ 改文案」。
+  ============================================================
+-->
+
+<style>
+  :root {
+    /* 取自背景海报的色板：紫蓝 + 暖金 */
+    --ink:       #140f2e;
+    --indigo:    #2e2456;
+    --violet:    #4a3a82;
+    --lilac:     #9c8fd8;
+    --mist:      #c9c4e8;
+    --gold:      #f2ce72;
+    --gold-soft: #fbefc4;
+    --cream:     #f4edd8;
+
+    /* 国风书法字体栈。
+       楷体类放在最前：本机（Windows 无楷体）会回落到宋体，
+       而 Mac / 装了楷体的设备会直接用上真正的手写感字形。 */
+    --calligraphy: "Kaiti SC", "STKaiti", "KaiTi", "楷体", "TW-Kai",
+                   "AR PL UKai CN", "Noto Serif SC", "Source Han Serif SC",
+                   "Songti SC", "SimSun", serif;
+    --sans: "Noto Sans SC", "Microsoft YaHei UI", "PingFang SC", "Segoe UI", sans-serif;
+
+    --art-ratio: 0.4614;   /* 664 / 1439 */
+
+    /* 指针视差，由 JS 写入 */
+    --px: 0;
+    --py: 0;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html {
+    height: 100%;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  body {
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow: hidden;
+    background:
+      radial-gradient(120% 90% at 50% 26%, rgba(242,206,114,.12) 0%, rgba(242,206,114,0) 54%),
+      linear-gradient(168deg, #1c1745 0%, var(--ink) 46%, #0d0a20 100%);
+    color: var(--cream);
+    font-family: var(--calligraphy);
+    -webkit-tap-highlight-color: transparent;
+    cursor: default;
+  }
+
+  /* ---------- 环境层：同一张图模糊放大，填掉宽屏两侧留白 ----------
+     刻意不在 CSS 里再引用一次图片：由 JS 克隆主图得到，
+     这样单文件版只需内嵌一份图片数据，否则体积翻倍。 */
+  .ambient {
+    position: fixed;
+    inset: -8%;
+    z-index: 0;
+    filter: blur(58px) saturate(1.25) brightness(.55);
+    transform: scale(1.12);
+    pointer-events: none;
+  }
+  .ambient img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  /* ---------- 背景海报 ---------- */
+  .artwork {
+    position: fixed;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;         /* 点击交给文档统一处理，避免被这里吃掉 */
+    opacity: 0;
+    transform: scale(1.045);
+    /* 入场：开屏点击后淡入 + 缩放归位 */
+    transition: opacity 1.05s ease .05s, transform 1.6s cubic-bezier(.16,.8,.28,1) .05s;
+  }
+  body.entered .artwork { opacity: 1; transform: none; }
+  .sway {
+    width: 100%;
+    height: 100%;
+    /* 视差单独一层，避免和呼吸动画的 transform 互相覆盖 */
+    transform: translate3d(calc(var(--px) * 8px), calc(var(--py) * 6px), 0);
+  }
+  .artwork img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;          /* 竖版海报不能用 cover，否则裁掉大半 */
+    object-position: 50% 50%;
+    animation: breathe 24s ease-in-out infinite;
+    will-change: transform;
+    user-select: none;
+  }
+
+  @keyframes breathe {
+    0%, 100% { transform: scale(1)     translateY(0); }
+    50%      { transform: scale(1.022) translateY(-5px); }
+  }
+
+  /* ---------- 月亮热区：位置每帧按图片实际绘制区换算，不写死坐标 ---------- */
+  .moon-hotspot {
+    position: fixed;
+    z-index: 3;
+    padding: 0;
+    background: none;
+    border: 0;
+    border-radius: 999px;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    /* 轻微金边，暗示这里可点，但不写任何提示文字 */
+    box-shadow: 0 0 0 0 rgba(242,206,114,0);
+    /* 开屏期间藏起来：既不可点，也不会被键盘 Tab 到 */
+    visibility: hidden;
+    transition: box-shadow .5s ease, visibility 0s linear .5s;
+  }
+  body.entered .moon-hotspot { visibility: visible; }
+  .moon-hotspot:hover,
+  .moon-hotspot:focus-visible { box-shadow: 0 0 0 2px rgba(242,206,114,.32); outline: none; }
+  .moon-hotspot:focus-visible { box-shadow: 0 0 0 2px rgba(242,206,114,.75); }
+
+  /* ---------- 粒子画布 ---------- */
+  #sky {
+    position: fixed;
+    inset: 0;
+    z-index: 6;                   /* 在卡片之上，否则卡片上的点击粒子会被盖住 */
+    width: 100%;
+    height: 100%;
+    display: block;
+    pointer-events: none;         /* 不挡任何点击 */
+    opacity: 0;
+    transition: opacity 1.7s ease .35s;
+  }
+  body.entered #sky { opacity: 1; }
+
+  /* ---------- 磨砂玻璃卡片 ---------- */
+  .glass {
+    position: fixed;
+    z-index: 5;
+    left: 50%;
+    top: 50%;
+    width: min(30rem, calc(100vw - 2.6rem));
+    padding: clamp(1.5rem, 4.6vw, 2.2rem) clamp(1.4rem, 4.6vw, 2.3rem);
+    border-radius: 20px;
+    text-align: center;
+
+    /* 底色用规格指定的 rgba(35,20,60,0.35)，其上叠两层：
+       ① 竖向细纹理：1px 竖线、每 6px 一道，极低不透明度，给卡片一点织物感
+       ② 一层极薄的竖向暗渐变：专门用来托底、保证文字清晰
+
+       ② 不在规格里，是实测后决定保留的。隔离测过（隐藏粒子层，避免随机飘过的
+       桂花/光尘污染读数）：
+         有这一层：卡片无文字区底色亮度 p50 = 115，祝福语对比度 7.30:1（AAA）
+         删掉后  ：底色亮度 p50 = 139，祝福语对比度 5.84:1（AA，仍达标但降级）
+       若你更想要通透的卡片、接受 AA 级对比度，删掉第二个 linear-gradient 即可。 */
+    background-color: rgba(35, 20, 60, .35);
+    background-image:
+      repeating-linear-gradient(90deg,
+        rgba(255, 255, 255, .055) 0 1px,
+        rgba(255, 255, 255, 0)    1px 6px),
+      linear-gradient(180deg, rgba(14, 9, 30, .18) 0%, rgba(14, 9, 30, .30) 100%);
+
+    backdrop-filter: blur(14px) saturate(150%);
+    -webkit-backdrop-filter: blur(14px) saturate(150%);
+    border: 1px solid rgba(242, 206, 114, .18);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, .16),
+      0 0 26px rgba(6, 4, 20, .38),        /* 四周微弱暗色阴影 */
+      0 12px 28px rgba(6, 4, 20, .28),     /* 向下一点，给一点层次 */
+      0 0 90px rgba(242, 206, 114, .07);   /* 极淡暖金氛围，不需要可删 */
+    transform: translate(-50%, -50%) scale(1.035);
+    opacity: 0;
+    transition: opacity .78s cubic-bezier(.4,0,.2,1),
+                transform .78s cubic-bezier(.16,.8,.28,1),
+                backdrop-filter .78s ease;
+  }
+  /* 开屏点击后才浮现 */
+  body.entered .glass { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+
+  /* 不支持 backdrop-filter 的浏览器给一层更实的底，保证文字可读 */
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .glass { background-color: rgba(30, 18, 54, .92); }
+  }
+
+  /* 点月亮后卡片淡出 */
+  body.card-hidden .glass {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(.955);
+    backdrop-filter: blur(0px) saturate(100%);
+    -webkit-backdrop-filter: blur(0px) saturate(100%);
+    pointer-events: none;
+    visibility: hidden;
+    transition: opacity .62s cubic-bezier(.4,0,1,1),
+                transform .62s cubic-bezier(.4,0,1,1),
+                backdrop-filter .62s ease,
+                visibility 0s linear .62s;
+  }
+
+  /* ---------- 卡片内文案 ----------
+     发光统一用「贴身的暗影 + 柔和暖金外发光」两层：
+     暗影负责把字从透出来的海报细节里托起来（保证清晰可读），
+     暖金外发光负责国风氛围。只有暖金一层会在杂背景上发糊。 */
+  .glass-eyebrow {
+    font-family: var(--sans);
+    font-size: .72rem;
+    letter-spacing: .4em;
+    text-indent: .4em;
+    color: var(--gold);
+    margin-bottom: .95rem;
+    text-shadow:
+      0 1px 2px rgba(8, 5, 20, .70),
+      0 0 14px rgba(242, 206, 114, .55),
+      0 0 30px rgba(242, 206, 114, .25);
+  }
+
+  .glass-to {
+    font-size: clamp(.92rem, 2.7vw, 1.02rem);
+    letter-spacing: .1em;
+    color: #e6e0f7;
+    margin-bottom: .9rem;
+    text-shadow:
+      0 1px 2px rgba(8, 5, 20, .65),
+      0 0 14px rgba(242, 206, 114, .42),
+      0 0 30px rgba(242, 206, 114, .18);
+  }
+  .glass-name {
+    font-size: 1.14em;
+    letter-spacing: .12em;
+    color: var(--gold-soft);
+    text-shadow:
+      0 1px 3px rgba(8, 5, 20, .72),
+      0 0 18px rgba(242, 206, 114, .80),
+      0 0 44px rgba(242, 206, 114, .40);
+  }
+
+  .glass-bless {
+    font-size: clamp(1rem, 3.1vw, 1.15rem);
+    line-height: 1.95;
+    letter-spacing: .05em;
+    color: #f8f4e6;
+    text-shadow:
+      0 1px 2px rgba(8, 5, 20, .72),
+      0 2px 8px rgba(8, 5, 20, .50),
+      0 0 16px rgba(242, 206, 114, .45),
+      0 0 40px rgba(242, 206, 114, .22);
+  }
+  .glass-bless span { display: block; }
+
+  .glass-rule {
+    width: 54px;
+    height: 1px;
+    margin: 1.25rem auto 1rem;
+    background: linear-gradient(90deg, rgba(242,206,114,0) 0%, var(--gold) 50%, rgba(242,206,114,0) 100%);
+    box-shadow: 0 0 12px rgba(242, 206, 114, .7);
+  }
+
+  .glass-sign {
+    font-size: clamp(.8rem, 2.4vw, .88rem);
+    letter-spacing: .22em;
+    text-indent: .22em;
+    color: #cfc7ee;
+    text-shadow:
+      0 1px 2px rgba(8, 5, 20, .65),
+      0 0 14px rgba(242, 206, 114, .38),
+      0 0 30px rgba(242, 206, 114, .16);
+  }
+
+  /* 矮屏（含 1366x768 这类笔记本）：收紧卡片，让它在「月亮下沿」与
+     「海报下部那两句诗」之间放得下，不压到海报已有的国潮文字。 */
+  @media (max-height: 820px) {
+    .glass { padding: 1.25rem 1.4rem; border-radius: 16px; }
+    .glass-eyebrow { margin-bottom: .6rem; }
+    .glass-to { margin-bottom: .6rem; }
+    .glass-bless { line-height: 1.8; }
+    .glass-rule { margin: .8rem auto .6rem; }
+  }
+
+  /* ---------- 开屏 ----------
+     与海报版同一个思路：整屏是一个真实 button，任何位置点一下都进入。
+     不写「点击进入」以外的多余文字。 */
+  .splash {
+    position: fixed;
+    inset: 0;
+    z-index: 10;
+    display: grid;
+    place-items: center;
+    background:
+      radial-gradient(72% 52% at 50% 42%, rgba(74, 58, 130, .55) 0%, rgba(74, 58, 130, 0) 68%),
+      linear-gradient(170deg, #1a1438 0%, var(--ink) 52%, #0b0819 100%);
+    transition: opacity .9s ease, transform .9s cubic-bezier(.4,0,.2,1);
+  }
+  body.entered .splash {
+    opacity: 0;
+    transform: scale(1.05);
+    pointer-events: none;
+    visibility: hidden;                       /* 移出 tab 顺序 */
+    transition: opacity .9s ease, transform .9s cubic-bezier(.4,0,.2,1), visibility 0s linear .9s;
+  }
+
+  .splash-hit {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    padding: 2rem;
+    font: inherit;
+    color: inherit;
+    background: none;
+    border: 0;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .splash-hit:focus-visible { outline: 2px solid var(--gold); outline-offset: -8px; }
+
+  /* 月环：细金线圆环 + 缓慢旋转的虚线外弧 */
+  .ring {
+    position: relative;
+    width: clamp(116px, 30vw, 168px);
+    height: clamp(116px, 30vw, 168px);
+    margin-bottom: clamp(1.8rem, 5vh, 2.8rem);
+    display: grid;
+    place-items: center;
+  }
+  .ring::before {
+    content: "";
+    position: absolute;
+    inset: -70%;
+    border-radius: 999px;
+    background: radial-gradient(circle, rgba(242,206,114,.20) 0%, rgba(242,206,114,.06) 38%, rgba(242,206,114,0) 66%);
+    animation: glow-breathe 9s ease-in-out infinite;
+  }
+  .ring svg { position: relative; width: 100%; height: 100%; overflow: visible; }
+  .ring circle {
+    fill: none;
+    stroke-width: 1;
+    transform-origin: 100px 100px;
+  }
+  .ring-track { stroke: rgba(242, 206, 114, .22); }
+  .ring-draw {
+    stroke: var(--gold);
+    stroke-linecap: round;
+    stroke-dasharray: 96 482;                 /* 2πr ≈ 578，只画一小段绕圈转 */
+    animation: ring-spin 14s linear infinite;
+  }
+  @keyframes ring-spin { to { transform: rotate(360deg); } }
+  @keyframes glow-breathe {
+    0%, 100% { opacity: .75; transform: scale(1); }
+    50%      { opacity: 1;   transform: scale(1.08); }
+  }
+
+  .splash-eyebrow {
+    font-family: var(--sans);
+    font-size: .74rem;
+    letter-spacing: .42em;
+    text-indent: .42em;
+    color: var(--lilac);
+    margin-bottom: 1rem;
+    text-shadow: 0 0 14px rgba(156, 143, 216, .45);
+  }
+
+  .splash-title {
+    font-family: var(--calligraphy);
+    font-weight: 600;
+    font-size: clamp(2.6rem, 8.5vw, 4.2rem);
+    line-height: 1.2;
+    letter-spacing: .28em;
+    text-indent: .28em;                       /* 抵消末字多出的字距，视觉居中 */
+    background: linear-gradient(96deg, var(--gold-soft) 8%, var(--gold) 54%, #d9a941 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    margin-bottom: 1.5rem;
+    filter: drop-shadow(0 0 18px rgba(242, 206, 114, .45));
+  }
+
+  .splash-rule {
+    width: 46px;
+    height: 1px;
+    background: linear-gradient(90deg, rgba(242,206,114,0) 0%, var(--gold) 50%, rgba(242,206,114,0) 100%);
+    box-shadow: 0 0 12px rgba(242, 206, 114, .7);
+    margin-bottom: clamp(1.5rem, 4.5vh, 2.2rem);
+  }
+
+  .splash-hint {
+    display: inline-flex;
+    align-items: center;
+    gap: .6rem;
+    font-family: var(--sans);
+    font-size: .78rem;
+    letter-spacing: .34em;
+    text-indent: .34em;
+    color: var(--gold);
+    text-shadow: 0 0 14px rgba(242, 206, 114, .55);
+    animation: hint-float 3.6s ease-in-out infinite;
+  }
+  .splash-hint .dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 999px;
+    background: var(--gold);
+    animation: dot-pulse 1.9s ease-in-out infinite;
+  }
+  @keyframes hint-float {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-5px); }
+  }
+  @keyframes dot-pulse {
+    0%, 100% { opacity: .3; }
+    50%      { opacity: 1; }
+  }
+
+  /* 矮屏开屏：收紧，保证一屏读完 */
+  @media (max-height: 680px) {
+    .ring { width: 92px; height: 92px; margin-bottom: 1.1rem; }
+    .splash-title { font-size: clamp(2rem, 6.5vw, 2.8rem); margin-bottom: 1rem; }
+    .splash-eyebrow { margin-bottom: .7rem; }
+    .splash-rule { margin-bottom: 1.1rem; }
+  }
+
+  /* ---------- 无障碍：减少动态 ---------- */
+  @media (prefers-reduced-motion: reduce) {
+    .artwork img,
+    .ring::before,
+    .ring-draw,
+    .splash-hint,
+    .splash-hint .dot { animation: none !important; }
+
+    .sway { transform: none !important; }
+    .artwork { transform: none !important; transition: opacity .3s linear; }
+    .splash { transition: opacity .3s linear; }
+    body.entered .splash { transform: none !important; transition: opacity .3s linear, visibility 0s linear .3s; }
+    #sky { transition: opacity .3s linear; }
+    .glass { transition: opacity .28s linear; transform: translate(-50%, -50%) !important; }
+    body.card-hidden .glass { transition: opacity .28s linear, visibility 0s linear .28s; }
+  }
+</style>
+</head>
+
+<body>
+  <div class="ambient" id="ambient" aria-hidden="true"></div>
+
+  <div class="artwork">
+    <div class="sway">
+      <img src="hero.jpg"
+           alt="中秋主题插画：一轮明亮满月悬于紫蓝夜空，月前有玉兔与桂花枝，下方是水墨远山、古亭瀑布与映着月光的湖面">
+    </div>
+  </div>
+
+  <button class="moon-hotspot" id="moon" type="button"
+          aria-expanded="true" aria-controls="glass"
+          aria-label="显示或隐藏祝福卡片"></button>
+
+  <div class="glass" id="glass" role="region" aria-label="中秋祝福">
+    <!-- ▼ 改文案 1／4：节令眉标 -->
+    <p class="glass-eyebrow">八月十五 · 中秋</p>
+
+    <!-- ▼ 改文案 2／4：名字位。换掉「余诺妍」三个字即可 -->
+    <p class="glass-to">致 <span class="glass-name">余诺妍</span></p>
+
+    <!-- ▼ 改文案 3／4：祝福语，每行一个 span -->
+    <p class="glass-bless">
+      <span>今夜月色很亮，</span>
+      <span>亮到能照见很远的地方。</span>
+      <span>愿你手边有事可做，心里有人可念，</span>
+      <span>抬头的时候，总有月可看。</span>
+    </p>
+
+    <div class="glass-rule" role="presentation"></div>
+
+    <!-- ▼ 改文案 4／4：落款 -->
+    <p class="glass-sign">桂影月华，与君共此</p>
+  </div>
+
+  <canvas id="sky" aria-hidden="true"></canvas>
+
+  <!-- 开屏：整屏就是一个按钮，任何位置点一下都进入主页面 -->
+  <div class="splash" id="splash">
+    <button class="splash-hit" id="enter" type="button" aria-label="轻触进入中秋画面">
+      <span class="ring" aria-hidden="true">
+        <svg viewBox="0 0 200 200">
+          <circle class="ring-track" cx="100" cy="100" r="92"></circle>
+          <circle class="ring-draw" cx="100" cy="100" r="92"></circle>
+        </svg>
+      </span>
+      <span class="splash-eyebrow">八月十五</span>
+      <span class="splash-title">中秋</span>
+      <span class="splash-rule" aria-hidden="true"></span>
+      <span class="splash-hint"><span class="dot" aria-hidden="true"></span>轻触进入</span>
+    </button>
+  </div>
+
+<script>
+(function () {
+  "use strict";
+
+  var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var artImg = document.querySelector(".artwork img");
+
+  /* 背景环境层复用主图：克隆同一个 <img>，浏览器复用同一张已解码的图，
+     而文件里只出现一份图片数据（否则单文件版体积翻倍）。 */
+  (function () {
+    var ambient = document.getElementById("ambient");
+    var clone = artImg.cloneNode(false);
+    clone.removeAttribute("alt");                 // 纯装饰，不重复朗读
+    clone.setAttribute("aria-hidden", "true");
+    ambient.appendChild(clone);
+  })();
+
+  /* ==========================================================
+     一、月亮热区：按图片实际绘制区换算，不写死坐标
+     月亮在图片里的位置由读图测得：圆心 (47%, 31%)，直径约占图片宽度 75%。
+     竖屏是铺满、宽屏是居中，所以必须每次按绘制区换算。
+     ========================================================== */
+  var MOON_CX = 0.47;      // 圆心 x（占图片宽度）
+  var MOON_CY = 0.31;      // 圆心 y（占图片高度）
+  var MOON_R  = 0.375;     // 半径（占图片宽度）
+  var HIT_PAD = 1.10;      // 热区略微放大，手机上更好点
+
+  var moonBtn = document.getElementById("moon");
+
+  // contain + object-position:50% 50% → 还原真实绘制区
+  function drawnRect() {
+    var r = artImg.getBoundingClientRect();
+    var nw = artImg.naturalWidth, nh = artImg.naturalHeight;
+    if (!nw || !r.width || !r.height) return null;
+    var imgRatio = nw / nh, boxRatio = r.width / r.height;
+    var w, h;
+    if (imgRatio > boxRatio) { w = r.width;  h = r.width / imgRatio; }
+    else                     { h = r.height; w = r.height * imgRatio; }
+    return {
+      left: r.left + (r.width - w) / 2,
+      top:  r.top + (r.height - h) / 2,
+      width: w, height: h
+    };
+  }
+
+  function placeMoonHotspot() {
+    var d = drawnRect();
+    if (!d) return;                                  // 图未加载完，先不显示热区
+    var r = MOON_R * d.width * HIT_PAD;
+    var cx = d.left + MOON_CX * d.width;
+    var cy = d.top + MOON_CY * d.height;
+    moonBtn.style.left = (cx - r) + "px";
+    moonBtn.style.top = (cy - r) + "px";
+    moonBtn.style.width = (r * 2) + "px";
+    moonBtn.style.height = (r * 2) + "px";
+  }
+
+  /* ==========================================================
+     一点五、卡片定位
+     默认垂直居中会正好压住月亮正中，而月亮既是画面焦点又是交互目标。
+     所以规则是「优先居中，但卡片上沿至少要离开月亮圆心一段距离」，
+     这样月亮大部分露在外面可点，卡片也仍在上半屏偏中位置。
+     宽度同理交给 CSS，这里只算纵向位置。
+     ========================================================== */
+  function safeInset(side) {
+    var probe = document.createElement("div");
+    probe.style.cssText = "position:fixed;left:0;width:0;visibility:hidden;height:env(safe-area-inset-" +
+      side + ", 0px);" + (side === "top" ? "top:0" : "bottom:0");
+    document.body.appendChild(probe);
+    var h = probe.getBoundingClientRect().height;
+    probe.remove();
+    return h;
+  }
+
+  function placeCard() {
+    var h = glass.offsetHeight;
+    if (!h) return;
+
+    var gap = 16;
+    var minTop = safeInset("top") + gap;
+    var maxTop = window.innerHeight - h - safeInset("bottom") - gap;
+
+    var T = (window.innerHeight - h) / 2;            // 首选：垂直居中
+    var d = drawnRect();
+    if (d) {
+      var moonCenterY = d.top + MOON_CY * d.height;
+      var moonR = MOON_R * d.width;
+      // 让开整个满月（含最亮的月心），卡片上沿落在月亮下沿。
+      // 之前只让开月心的 0.1 倍半径，结果卡片仍压住月亮下半部与月心附近的高光。
+      var clear = moonCenterY + moonR;
+      if (T < clear) T = clear;
+    }
+
+    if (maxTop < minTop) { T = (window.innerHeight - h) / 2; }   // 空间实在不够，退回居中
+    else T = Math.max(minTop, Math.min(T, maxTop));
+
+    // top 定位的是元素上沿，translate(-50%,-50%) 又会把它上移半个高度，
+    // 所以要加回 h/2 才是想让它落到的视觉位置
+    glass.style.top = Math.round(T + h / 2) + "px";
+  }
+
+  /* ==========================================================
+     二、点月亮 → 卡片淡入 / 淡出
+     ========================================================== */
+  var glass = document.getElementById("glass");
+
+  function setCard(show) {
+    document.body.classList.toggle("card-hidden", !show);
+    moonBtn.setAttribute("aria-expanded", show ? "true" : "false");
+    glass.setAttribute("aria-hidden", show ? "false" : "true");
+  }
+
+  moonBtn.addEventListener("click", function () {
+    setCard(document.body.classList.contains("card-hidden"));
+  });
+
+  /* ==========================================================
+     三、点页面任意位置 → 该处绽放中秋粒子
+     按规格不写任何提示文字，靠用户自己发现。
+     粒子画在卡片上方，所以卡片上点击也能看见。
+     ========================================================== */
+  var GLYPHS = ["\u{1F95E}", "\u{1F407}", "\u{1F342}", "\u{2728}"];  // 月饼 玉兔 桂花 星光
+  var EMOJI_FONT = '"Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", "EmojiOne Color", sans-serif';
+
+  var cvs = document.getElementById("sky");
+  var ctx = cvs.getContext("2d");
+  var TAU = Math.PI * 2;
+
+  var W = 0, H = 0, DPR = 1;
+  var burst = [];        // 点击绽放的粒子
+  var petals = [];       // 背景缓缓飘落的桂花
+  var motes = [];        // 背景光尘
+
+  var MAX_BURST = 130;   // 同时存在的上限，手机上防掉帧
+
+  function makePetal(fromTop) {
+    return {
+      x: Math.random() * W,
+      y: fromTop ? -26 : Math.random() * H,
+      size: 2.2 + Math.random() * 3.2,
+      vy: 7 + Math.random() * 13,
+      sway: 12 + Math.random() * 26,
+      phase: Math.random() * TAU,
+      rot: Math.random() * TAU,
+      vrot: (Math.random() - 0.5) * 0.8,
+      alpha: 0.14 + Math.random() * 0.26,
+      depth: 0.3 + Math.random() * 0.7
+    };
+  }
+
+  function makeMote() {
+    return {
+      x: Math.random() * W,
+      y: Math.random() * H,
+      r: 0.5 + Math.random() * 1.4,
+      pulse: 0.4 + Math.random() * 1.2,
+      phase: Math.random() * TAU,
+      drift: 3 + Math.random() * 8,
+      alpha: 0.10 + Math.random() * 0.28,
+      depth: 0.15 + Math.random() * 0.5
+    };
+  }
+
+  function build() {
+    var area = W * H;
+
+    var petalCount = Math.round(Math.min(26, Math.max(8, area / 110000)));
+    petals = [];
+    for (var i = 0; i < petalCount; i++) petals.push(makePetal(false));
+
+    var moteCount = Math.round(Math.min(56, Math.max(16, area / 42000)));
+    motes = [];
+    for (var j = 0; j < moteCount; j++) motes.push(makeMote());
+  }
+
+  function spawnBurst(x, y) {
+    // 手机上少放一些，避免 emoji 彩色字形绘制太吃力
+    var small = Math.min(W, H) < 520;
+    var count = small ? 12 + Math.floor(Math.random() * 5) : 16 + Math.floor(Math.random() * 8);
+
+    for (var i = 0; i < count; i++) {
+      if (burst.length >= MAX_BURST) burst.shift();      // 超上限丢最旧的
+      var a = (TAU * i) / count + (Math.random() - 0.5) * 0.6;
+      var speed = (small ? 55 : 70) + Math.random() * (small ? 120 : 165);
+      burst.push({
+        x: x, y: y,
+        vx: Math.cos(a) * speed,
+        vy: Math.sin(a) * speed - 34,                    // 略微上飘
+        drag: 0.86 + Math.random() * 0.08,               // 每秒速度衰减
+        life: 0,
+        maxLife: 1.05 + Math.random() * 0.85,
+        size: (small ? 13 : 16) + Math.random() * (small ? 10 : 16),
+        rot: (Math.random() - 0.5) * 1.2,
+        vrot: (Math.random() - 0.5) * 3.2,
+        glyph: GLYPHS[Math.floor(Math.random() * GLYPHS.length)]
+      });
+    }
+  }
+
+  function resize() {
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    W = cvs.clientWidth;
+    H = cvs.clientHeight;
+    cvs.width = Math.round(W * DPR);
+    cvs.height = Math.round(H * DPR);
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    build();
+    placeMoonHotspot();
+    placeCard();
+  }
+
+  function draw(t) {
+    ctx.clearRect(0, 0, W, H);
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    // 背景光尘
+    for (var i = 0; i < motes.length; i++) {
+      var m = motes[i];
+      var glow = 0.45 + 0.55 * Math.sin(t * m.pulse + m.phase);
+      ctx.globalAlpha = m.alpha * glow;
+      ctx.fillStyle = "#fbefc4";
+      ctx.beginPath();
+      ctx.arc(m.x + px * m.depth * 16, m.y + py * m.depth * 10, m.r, 0, TAU);
+      ctx.fill();
+    }
+
+    // 背景桂花
+    for (var k = 0; k < petals.length; k++) {
+      var p = petals[k];
+      var ox = Math.sin(t * 0.42 + p.phase) * p.sway;
+      ctx.save();
+      ctx.globalAlpha = p.alpha;
+      ctx.translate(p.x + ox + px * p.depth * 24, p.y + py * p.depth * 13);
+      ctx.rotate(p.rot);
+      ctx.fillStyle = "#f2ce72";
+      ctx.beginPath();
+      ctx.ellipse(0, 0, p.size, p.size * 0.44, 0, 0, TAU);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // 点击绽放的粒子：向外飘散 + 淡出
+    for (var b = 0; b < burst.length; b++) {
+      var q = burst[b];
+      var k2 = q.life / q.maxLife;                        // 0 → 1
+      // 从满不透明度开始淡出。之前的曲线在 life=0 时 alpha 为 0，
+      // 粒子刚生成的那一帧是看不见的（也让它无法被同步绘制捕捉）。
+      var fade = 1 - Math.pow(k2, 1.6);
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, fade);
+      ctx.translate(q.x, q.y);
+      ctx.rotate(q.rot);
+      ctx.font = q.size.toFixed(1) + "px " + EMOJI_FONT;
+      ctx.fillText(q.glyph, 0, 0);
+      ctx.restore();
+    }
+
+    ctx.globalAlpha = 1;
+  }
+
+  var rafId = 0, last = 0;
+
+  function frame(now) {
+    var t = now / 1000;
+    var dt = Math.min(t - last, 0.05);
+    last = t;
+
+    for (var i = 0; i < motes.length; i++) {
+      var m = motes[i];
+      m.y -= m.drift * dt * 0.35;
+      if (m.y < -12) { motes[i] = makeMote(); motes[i].y = H + 12; }
+    }
+
+    for (var k = 0; k < petals.length; k++) {
+      var p = petals[k];
+      p.y += p.vy * dt;
+      p.rot += p.vrot * dt;
+      if (p.y > H + 30) petals[k] = makePetal(true);
+    }
+
+    for (var b = burst.length - 1; b >= 0; b--) {
+      var q = burst[b];
+      q.life += dt;
+      if (q.life >= q.maxLife) { burst.splice(b, 1); continue; }
+      var damp = Math.pow(q.drag, dt * 60);
+      q.vx *= damp;
+      q.vy *= damp;
+      q.x += q.vx * dt;
+      q.y += q.vy * dt;
+      q.rot += q.vrot * dt;
+    }
+
+    draw(t);
+    rafId = window.requestAnimationFrame(frame);
+  }
+
+  function start() {
+    if (rafId) return;
+    last = performance.now() / 1000;
+    rafId = window.requestAnimationFrame(frame);
+  }
+
+  function stop() {
+    if (rafId) { window.cancelAnimationFrame(rafId); rafId = 0; }
+  }
+
+  /* ---------- 点击任意位置绽放 ----------
+     用 pointerdown 而不是 click：手机上反馈更跟手。
+     点月亮时也会同时绽放（它也是「页面任意位置」）。 */
+  function onPress(e) {
+    if (!entered || reduceMotion) return;        // 开屏期间不放粒子；减少动态模式也不放
+    var x, y;
+    if (e.touches && e.touches.length) { x = e.touches[0].clientX; y = e.touches[0].clientY; }
+    else { x = e.clientX; y = e.clientY; }
+    spawnBurst(x, y);
+    // 同步补画一帧：粒子在按下的同一帧就出现，不必等下一次 rAF（最多能差 16ms）。
+    // 顺带让「点击是否真的画出粒子」这件事变成可确定性验证的，不必依赖帧调度。
+    draw(performance.now() / 1000);
+  }
+
+  /* ==========================================================
+     四、指针视差（仅精细指针设备；手机上挂监听看不出效果还费电）
+     ========================================================== */
+  var px = 0, py = 0, tx = 0, ty = 0, pRaf = 0, pOn = false;
+
+  function onPointerMove(e) {
+    tx = (e.clientX / window.innerWidth) * 2 - 1;
+    ty = (e.clientY / window.innerHeight) * 2 - 1;
+    if (pRaf) return;
+    pRaf = window.requestAnimationFrame(function () {
+      pRaf = 0;
+      px += (tx - px) * 0.06;
+      py += (ty - py) * 0.06;
+      document.documentElement.style.setProperty("--px", px.toFixed(4));
+      document.documentElement.style.setProperty("--py", py.toFixed(4));
+    });
+  }
+
+  function enableParallax() {
+    var fine = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+    if (!fine || reduceMotion) return;
+    window.addEventListener("pointermove", onPointerMove);
+    pOn = true;
+  }
+
+  /* ==========================================================
+     五、生命周期
+     ========================================================== */
+  function onResize() { resize(); }
+  window.addEventListener("resize", onResize);
+
+  document.addEventListener("visibilitychange", function () {
+    if (document.hidden) stop(); else start();
+  });
+
+  function cleanup() {
+    stop();
+    if (pRaf) window.cancelAnimationFrame(pRaf);
+    window.removeEventListener("resize", onResize);
+    window.removeEventListener("pointerdown", onPress);
+    if (pOn) window.removeEventListener("pointermove", onPointerMove);
+  }
+  window.addEventListener("pagehide", cleanup);
+
+  /* ==========================================================
+     六、开屏 → 点击进入主页面
+     ========================================================== */
+  var enterBtn = document.getElementById("enter");
+  var entered = false;                 // onPress 要用，先声明
+
+  function setEntered(on) {
+    entered = on;
+    document.body.classList.toggle("entered", on);
+    if (on) {
+      enterBtn.blur();                 // 开屏随即隐藏，主动移出焦点
+      if (reduceMotion) draw(0); else start();
+    } else {
+      stop();
+      enterBtn.focus({ preventScroll: true });
+    }
+  }
+
+  enterBtn.addEventListener("click", function () { setEntered(true); });
+
+  /* ---------- 启动 ---------- */
+  resize();
+  enableParallax();
+  if (artImg.complete) { placeMoonHotspot(); placeCard(); }
+  else artImg.addEventListener("load", function () { placeMoonHotspot(); placeCard(); });
+  // 字体加载完卡片高度才会最终确定，那时再摆一次
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(function () { placeMoonHotspot(); placeCard(); });
+  }
+
+  if (!reduceMotion) window.addEventListener("pointerdown", onPress);
+
+  /* 深链：#open 直接进入主页面、跳过开屏。
+     分享时想让对方一进来就看到海报与卡片，链接末尾加 #open 即可。 */
+  if (window.location.hash === "#open") {
+    setEntered(true);
+  } else if (reduceMotion) {
+    draw(0);                           // 静止模式：开屏下也先画好一帧背景
+  }
+})();
+</script>
+</body>
+</html>
